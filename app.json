@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "USBGF App",
+    "slug": "ubgsf-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./app/assets/USBGF_com_logo.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./app/assets/USBGF_com_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A1A2E"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.usbgf.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./app/assets/USBGF_com_logo.png",
+        "backgroundColor": "#1A1A2E"
+      },
+      "package": "com.usbgf.app"
+    },
+    "web": {
+      "favicon": "./app/assets/USBGF_com_logo.png"
+    }
+  }
+}
