@@ -94,17 +94,10 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
     return <OnboardingSlide item={item} />;
   };
 
-  const buttonTitle = currentIndex === onboardingData.length - 1 ? 'Get started' : 'Continue';
+  const buttonTitle = currentIndex === onboardingData.length - 1 ? 'Get started' : 'Next';
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Skip Button */}
-      <View style={styles.skipContainer}>
-        <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Carousel */}
       <View style={styles.carouselContainer}>
         <FlatList
@@ -133,16 +126,30 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
 
       {/* Dots Indicator */}
       <View style={styles.dotsContainer}>
-        <Dots count={onboardingData.length} activeIndex={currentIndex} />
+        <Dots count={3} activeIndex={currentIndex} />
       </View>
 
-      {/* Continue Button */}
+      {/* Button Container with Skip and Next buttons */}
       <View style={styles.buttonContainer}>
-        <Button
-          title={buttonTitle}
-          onPress={handleContinue}
-          variant="primary"
-        />
+        <View style={styles.buttonsRow}>
+          {/* Skip Button */}
+          <Button
+            title="Skip"
+            onPress={handleSkip}
+            variant="secondary"
+            style={[styles.skipButton, { backgroundColor: theme.colors.surface }]}
+            textStyle={{ color: theme.colors.textPrimary }}
+          />
+          
+          {/* Next Button */}
+          <Button
+            title={buttonTitle}
+            onPress={handleContinue}
+            variant="primary"
+            style={[styles.nextButton, { backgroundColor: theme.colors.accent }]}
+            textStyle={{ color: theme.colors.textOnDark }}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -152,21 +159,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.bg,
-  },
-  skipContainer: {
-    position: 'absolute',
-    top: theme.spacing['2xl'],
-    right: theme.spacing.lg,
-    zIndex: 1,
-  },
-  skipButton: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
-  skipText: {
-    ...theme.typography.body,
-    color: theme.colors.textOnDark,
-    fontWeight: '600',
   },
   carouselContainer: {
     flex: 1,
@@ -189,5 +181,17 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingHorizontal: theme.spacing['3xl'],
     paddingBottom: theme.spacing['2xl'],
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: theme.spacing.lg,
+  },
+  skipButton: {
+    flex: 1,
+  },
+  nextButton: {
+    flex: 1,
   },
 });

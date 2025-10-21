@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   activeDot: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface, // White dot for visibility
   },
   inactiveDot: {
     backgroundColor: theme.colors.textSecondary,

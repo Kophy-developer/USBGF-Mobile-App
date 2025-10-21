@@ -16,7 +16,7 @@ import { theme } from '../theme/tokens';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'icon';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'icon' | 'grey';
 
 interface ButtonProps {
   title?: string;
@@ -115,6 +115,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  grey: {
+    backgroundColor: theme.colors.grey,
+  },
   ghost: {
     backgroundColor: 'transparent',
   },
@@ -136,6 +139,9 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     color: theme.colors.textPrimary,
+  },
+  greyText: {
+    color: theme.colors.textOnDark,
   },
   ghostText: {
     color: theme.colors.primary,

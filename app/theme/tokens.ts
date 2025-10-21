@@ -22,6 +22,7 @@ export const colors = {
   border: '#E5E5E5',
   placeholder: '#9CA3AF',
   disabled: '#D1D5DB',
+  grey: '#6B7280', // Medium grey for secondary buttons
   
   // OAuth brand colors
   apple: '#000000',
