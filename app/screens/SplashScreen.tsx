@@ -1,13 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withTiming,
-  withDelay,
-} from 'react-native-reanimated';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
@@ -20,21 +13,7 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
-  const logoScale = useSharedValue(1);
-  const logoOpacity = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-
   useEffect(() => {
-    // Start animations
-    logoOpacity.value = withTiming(1, { duration: 500 });
-    
-    logoScale.value = withSequence(
-      withTiming(1.06, { duration: 800 }),
-      withTiming(1, { duration: 400 })
-    );
-    
-    textOpacity.value = withDelay(600, withTiming(1, { duration: 500 }));
-
     // Navigate after 2 seconds
     const timer = setTimeout(async () => {
       try {
@@ -49,31 +28,22 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
     return () => clearTimeout(timer);
   }, [navigation]);
 
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-    opacity: logoOpacity.value,
-  }));
-
-  const textAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+        <View style={styles.logoContainer}>
           <Image
             source={require('../assets/USBGF_com_logo.png')}
             style={styles.logo}
             resizeMode="contain"
             accessibilityLabel="USBGF Logo"
           />
-        </Animated.View>
+        </View>
         
-        <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
+        <View style={styles.textContainer}>
           <Text style={styles.appName}>USBGF</Text>
           <Text style={styles.subtitle}>US Backgammon Federation</Text>
-        </Animated.View>
+        </View>
       </View>
     </SafeAreaView>
   );

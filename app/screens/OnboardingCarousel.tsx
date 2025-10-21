@@ -9,11 +9,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
@@ -47,12 +42,25 @@ const onboardingData = [
   },
 ];
 
+// Separate component for each slide to avoid hook issues
+const OnboardingSlide: React.FC<{ item: typeof onboardingData[0] }> = ({ item }) => {
+  return (
+    <View style={styles.slideContainer}>
+      <Image
+        source={item.image}
+        style={styles.slideImage}
+        resizeMode="contain"
+        accessibilityLabel={item.accessibilityLabel}
+      />
+    </View>
+  );
+};
+
 export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
   navigation,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
-  const imageOpacity = useSharedValue(1);
 
   const handleSkip = async () => {
     await setOnboardingSeen();
@@ -77,24 +85,13 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
   const handleScroll = (event: any) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(contentOffsetX / screenWidth);
-    setCurrentIndex(index);
+    // Ensure index is within bounds
+    const clampedIndex = Math.max(0, Math.min(index, onboardingData.length - 1));
+    setCurrentIndex(clampedIndex);
   };
 
   const renderItem = ({ item }: { item: typeof onboardingData[0] }) => {
-    const animatedStyle = useAnimatedStyle(() => ({
-      opacity: imageOpacity.value,
-    }));
-
-    return (
-      <Animated.View style={[styles.slideContainer, animatedStyle]}>
-        <Image
-          source={item.image}
-          style={styles.slideImage}
-          resizeMode="contain"
-          accessibilityLabel={item.accessibilityLabel}
-        />
-      </Animated.View>
-    );
+    return <OnboardingSlide item={item} />;
   };
 
   const buttonTitle = currentIndex === onboardingData.length - 1 ? 'Get started' : 'Continue';
@@ -125,6 +122,12 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
             offset: screenWidth * index,
             index,
           })}
+          onMomentumScrollEnd={(event) => {
+            const contentOffsetX = event.nativeEvent.contentOffset.x;
+            const index = Math.round(contentOffsetX / screenWidth);
+            const clampedIndex = Math.max(0, Math.min(index, onboardingData.length - 1));
+            setCurrentIndex(clampedIndex);
+          }}
         />
       </View>
 
