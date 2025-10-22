@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SplashScreen } from '../screens/SplashScreen';
 import { OnboardingCarousel } from '../screens/OnboardingCarousel';
 import { SignInScreen } from '../screens/SignInScreen';
+import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { LegalWebview } from '../screens/LegalWebview';
 import { HomePlaceholderScreen } from '../screens/HomePlaceholderScreen';
 
@@ -15,7 +16,8 @@ export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
   SignIn: undefined;
-  LegalWebview: { type: 'privacy' | 'terms' };
+  PrivacyPolicy: undefined;
+  LegalWebview: { type: 'bylaws' };
   HomePlaceholder: undefined;
 };
 
@@ -50,6 +52,7 @@ export const Navigation: React.FC = () => {
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingCarousel} />
           <Stack.Screen name="SignIn" component={SignInScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
           <Stack.Screen name="LegalWebview" component={LegalWebview} />
           <Stack.Screen name="HomePlaceholder" component={HomePlaceholderScreen} />
         </Stack.Navigator>

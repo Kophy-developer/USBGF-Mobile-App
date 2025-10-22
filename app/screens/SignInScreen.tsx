@@ -14,8 +14,6 @@ import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
-import { OAuthButton } from '../components/OAuthButton';
-import { AuthDivider } from '../components/AuthDivider';
 
 type SignInScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignIn'>;
 
@@ -59,36 +57,17 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
     }, 1200);
   };
 
-  const handleAppleSignIn = async () => {
-    setIsLoading(true);
-    
-    // Simulate OAuth flow
-    setTimeout(() => {
-      setIsLoading(false);
-      navigation.replace('HomePlaceholder');
-    }, 1000);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    
-    // Simulate OAuth flow
-    setTimeout(() => {
-      setIsLoading(false);
-      navigation.replace('HomePlaceholder');
-    }, 1000);
-  };
 
   const handleForgotPassword = () => {
     Alert.alert('Forgot Password', 'This feature will be available soon.');
   };
 
   const handlePrivacyPolicy = () => {
-    navigation.navigate('LegalWebview', { type: 'privacy' });
+    navigation.navigate('PrivacyPolicy');
   };
 
   const handleTermsOfService = () => {
-    navigation.navigate('LegalWebview', { type: 'terms' });
+    navigation.navigate('LegalWebview', { type: 'bylaws' });
   };
 
   const isFormValid = email.trim() && password.trim() && password.length >= 6;
@@ -148,22 +127,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        {/* OAuth */}
-        <View style={styles.oauthContainer}>
-          <AuthDivider />
-          
-          <OAuthButton
-            provider="apple"
-            onPress={handleAppleSignIn}
-          />
-          
-          <View style={styles.oauthSpacing} />
-          
-          <OAuthButton
-            provider="google"
-            onPress={handleGoogleSignIn}
-          />
-        </View>
 
         {/* Footer Links */}
         <View style={styles.footerContainer}>
@@ -177,7 +140,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
             <Text style={styles.separator}>•</Text>
             <TouchableOpacity onPress={handleTermsOfService}>
-              <Text style={styles.linkText}>Terms of Service</Text>
+              <Text style={styles.linkText}>USBGF ByLaws</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -222,12 +185,6 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: theme.spacing['3xl'],
-  },
-  oauthContainer: {
-    marginBottom: theme.spacing['3xl'],
-  },
-  oauthSpacing: {
-    height: theme.spacing.lg,
   },
   footerContainer: {
     alignItems: 'center',

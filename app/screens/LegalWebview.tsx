@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Linking, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
+import { Button } from '../components/Button';
 
 type LegalWebviewNavigationProp = StackNavigationProp<RootStackParamList, 'LegalWebview'>;
 type LegalWebviewRouteProp = RouteProp<RootStackParamList, 'LegalWebview'>;
@@ -18,41 +19,51 @@ interface LegalWebviewProps {
 export const LegalWebview: React.FC<LegalWebviewProps> = ({ navigation, route }) => {
   const { type } = route.params;
 
-  const getTitle = () => {
-    return type === 'privacy' ? 'Privacy Policy' : 'Terms of Service';
-  };
-
-  const getUrl = () => {
-    return type === 'privacy' 
-      ? 'https://example.com/privacy-policy'
-      : 'https://example.com/terms-of-service';
+  const handleOpenPDF = async () => {
+    // Official USBGF ByLaws PDF from their website
+    const pdfUrl = 'https://usbgf.org/wp-content/uploads/2021/05/USBGF-ByLaws-C-2017-03-07.pdf';
+    
+    try {
+      const supported = await Linking.canOpenURL(pdfUrl);
+      if (supported) {
+        await Linking.openURL(pdfUrl);
+      } else {
+        console.log('Cannot open PDF URL');
+      }
+    } catch (error) {
+      console.log('Error opening PDF:', error);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{getTitle()}</Text>
+        <Text style={styles.title}>USBGF ByLaws</Text>
       </View>
       
-      <WebView
-        source={{ uri: getUrl() }}
-        style={styles.webview}
-        startInLoadingState={true}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading...</Text>
-          </View>
-        )}
-        onError={(syntheticEvent) => {
-          const { nativeEvent } = syntheticEvent;
-          console.warn('WebView error: ', nativeEvent);
-        }}
-        onHttpError={(syntheticEvent) => {
-          const { nativeEvent } = syntheticEvent;
-          console.warn('WebView HTTP error: ', nativeEvent);
-        }}
-      />
+      <View style={styles.content}>
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoTitle}>USBGF ByLaws Document</Text>
+          <Text style={styles.infoText}>
+            The USBGF ByLaws contain the official rules and regulations governing the United States Backgammon Federation. This document outlines the organization's structure, membership requirements, and operational procedures.
+          </Text>
+          
+          <Text style={styles.infoText}>
+            To view the complete ByLaws document, please tap the button below to open it in your browser.
+          </Text>
+          
+          <Button
+            title="View USBGF ByLaws PDF"
+            onPress={handleOpenPDF}
+            variant="primary"
+            style={styles.pdfButton}
+          />
+          
+          <Text style={styles.noteText}>
+            Note: The PDF will open in your default browser or PDF viewer.
+          </Text>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -73,22 +84,36 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     textAlign: 'center',
   },
-  webview: {
+  content: {
     flex: 1,
+    paddingHorizontal: theme.spacing['3xl'],
+    paddingVertical: theme.spacing['2xl'],
   },
-  loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  infoContainer: {
+    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
   },
-  loadingText: {
+  infoTitle: {
+    ...theme.typography.title,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: theme.spacing['2xl'],
+  },
+  infoText: {
     ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    lineHeight: 24,
+    marginBottom: theme.spacing.lg,
+    textAlign: 'center',
+  },
+  pdfButton: {
+    marginVertical: theme.spacing['2xl'],
+  },
+  noteText: {
+    ...theme.typography.caption,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: theme.spacing.lg,
   },
 });
