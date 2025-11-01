@@ -53,7 +53,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      navigation.replace('HomePlaceholder');
+      navigation.replace('MainApp');
     }, 1200);
   };
 
@@ -68,6 +68,10 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
   const handleTermsOfService = () => {
     navigation.navigate('LegalWebview', { type: 'bylaws' });
+  };
+
+  const handleRegister = () => {
+    navigation.navigate('Registration');
   };
 
   const isFormValid = email.trim() && password.trim() && password.length >= 6;
@@ -125,6 +129,11 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
             loading={isLoading}
             disabled={!isFormValid}
           />
+          
+          {/* Register link button */}
+          <TouchableOpacity style={styles.registerLinkButton} onPress={handleRegister}>
+            <Text style={styles.registerLinkText}>Don’t have an account? Register</Text>
+          </TouchableOpacity>
         </View>
 
 
@@ -185,6 +194,15 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: theme.spacing['3xl'],
+  },
+  registerLinkButton: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+  },
+  registerLinkText: {
+    ...theme.typography.caption,
+    color: theme.colors.primary,
+    fontWeight: '700',
   },
   footerContainer: {
     alignItems: 'center',

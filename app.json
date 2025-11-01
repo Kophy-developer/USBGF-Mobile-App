@@ -16,17 +16,23 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.usbgf.app"
+      "bundleIdentifier": "org.usbgf.mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./app/assets/USBGF_com_logo.png",
         "backgroundColor": "#1A1A2E"
       },
-      "package": "com.usbgf.app"
+      "package": "org.usbgf.mobile"
     },
     "web": {
       "favicon": "./app/assets/USBGF_com_logo.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4d8f7596-6967-47e5-8fe1-056f2cf13724"
+      }
+    },
+    "owner": "the_mastermind"
   }
 }

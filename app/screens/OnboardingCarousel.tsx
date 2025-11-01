@@ -64,7 +64,7 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
 
   const handleSkip = async () => {
     await setOnboardingSeen();
-    navigation.replace('SignIn');
+    navigation.replace('AuthStack');
   };
 
   const handleContinue = () => {
@@ -79,7 +79,7 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
 
   const handleGetStarted = async () => {
     await setOnboardingSeen();
-    navigation.replace('SignIn');
+    navigation.replace('AuthStack');
   };
 
   const handleScroll = (event: any) => {

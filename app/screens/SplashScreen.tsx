@@ -18,7 +18,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
     const timer = setTimeout(async () => {
       try {
         const onboardingSeen = await getOnboardingSeen();
-        navigation.replace(onboardingSeen ? 'SignIn' : 'Onboarding');
+        navigation.replace(onboardingSeen ? 'AuthStack' : 'Onboarding');
       } catch (error) {
         // Default to onboarding if there's an error
         navigation.replace('Onboarding');
