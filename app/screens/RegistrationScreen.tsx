@@ -152,7 +152,7 @@ export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigati
           />
 
           <Button title="Create account" onPress={handleSubmit} variant="primary" loading={submitting} disabled={!isValid} />
-        </View>
+      </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing['3xl'],
   },
   headerText: {
+    ...theme.typography.heading,
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.colors.surface,

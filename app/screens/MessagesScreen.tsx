@@ -42,7 +42,7 @@ export const MessagesScreen: React.FC = () => {
         <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
           <Text style={styles.menuIcon}>☰</Text>
         </TouchableOpacity>
-
+        
         <View style={styles.logoContainer}>
           <Image
             source={require('../assets/USBGF_com_logo.png')}
@@ -51,7 +51,7 @@ export const MessagesScreen: React.FC = () => {
             accessibilityLabel="USBGF Logo"
           />
         </View>
-
+        
         <TouchableOpacity style={styles.searchButton}>
           <Text style={styles.searchIcon}>⌕</Text>
         </TouchableOpacity>
@@ -123,25 +123,25 @@ const styles = StyleSheet.create({
   searchButton: { padding: theme.spacing.sm },
   searchIcon: { fontSize: 45, color: theme.colors.textPrimary },
 
-  titleBar: { backgroundColor: '#1E3553', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
+  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
+  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
 
   list: { flex: 1 },
   listContent: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160 },
 
   messageItem: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: theme.spacing['2xl'] },
-  messageTitle: { fontSize: 22, color: theme.colors.textPrimary, fontWeight: '700', marginBottom: theme.spacing.sm },
-  messageText: { fontSize: 22, color: theme.colors.textPrimary, lineHeight: 32 },
+  messageTitle: { ...theme.typography.heading, fontSize: 22, color: theme.colors.textPrimary, fontWeight: '700', marginBottom: theme.spacing.sm },
+  messageText: { ...theme.typography.body, fontSize: 22, color: theme.colors.textPrimary, lineHeight: 32 },
   chevron: { fontSize: 24, color: theme.colors.textPrimary, paddingLeft: theme.spacing.md, paddingTop: theme.spacing.md },
 
   dropdown: { paddingLeft: theme.spacing['3xl'], paddingRight: theme.spacing['3xl'], paddingBottom: theme.spacing.md },
-  contactBtn: { alignSelf: 'flex-start', backgroundColor: '#1E3553', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
-  contactBtnText: { color: '#FFFFFF', fontWeight: '700' },
+  contactBtn: { alignSelf: 'flex-start', backgroundColor: '#1B365D', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
+  contactBtnText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
 
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 900 },
   menuDropdown: { position: 'absolute', top: 120, left: theme.spacing['3xl'], width: 220, backgroundColor: '#FFFFFF', borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, overflow: 'hidden', zIndex: 1000 },
   menuItem: { paddingVertical: theme.spacing.lg, paddingHorizontal: theme.spacing['2xl'], backgroundColor: '#FFFFFF' },
-  menuItemText: { fontSize: 16, color: theme.colors.textPrimary, fontWeight: '500' },
+  menuItemText: { ...theme.typography.body, fontSize: 16, color: theme.colors.textPrimary, fontWeight: '500' },
   logoutText: { color: '#B91C1C' },
   menuDivider: { height: 1, backgroundColor: theme.colors.border },
 });

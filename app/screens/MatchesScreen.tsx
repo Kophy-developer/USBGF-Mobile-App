@@ -1,15 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { theme } from '../theme/tokens';
 
 type EventType = 'ABT' | 'ONLINE';
 
-const Chevron: React.FC = () => <Text style={{ fontSize: 18 }}>▾</Text>;
+const Chevron: React.FC = () => <Text style={{ ...theme.typography.body, fontSize: 18 }}>▾</Text>;
 
 export const MatchesScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [selectorOpen, setSelectorOpen] = React.useState(true);
   const [viewType, setViewType] = React.useState<EventType | null>(null);
+
+  // Reset selection every time the screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      setViewType(null);
+      setSelectorOpen(true);
+    }, [])
+  );
 
   const choose = (t: EventType) => {
     setViewType(t);
@@ -60,9 +70,16 @@ export const MatchesScreen: React.FC = () => {
                 <Text style={styles.rowSub}>Speedgammon - July 2025</Text>
               </View>
               <Chevron />
-            </View>
+      </View>
             <Row left="TBD vs TBD" right="Board Jackpot" />
             <Row left="TBD vs Ed Corey" right="ABT Advanced - June" />
+
+            <TouchableOpacity 
+              style={styles.calendarBtn}
+              onPress={() => navigation.navigate('ABTCalendar' as never)}
+            >
+              <Text style={styles.calendarText}>View ABT Calendar</Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -86,7 +103,7 @@ export const MatchesScreen: React.FC = () => {
           <TouchableOpacity style={styles.modalBtn} onPress={() => choose('ONLINE')}>
             <Text style={styles.modalBtnText}>Online Events</Text>
           </TouchableOpacity>
-        </View>
+      </View>
       </Modal>
     </SafeAreaView>
   );
@@ -96,21 +113,23 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
   content: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160, gap: theme.spacing.md },
   helper: { textAlign: 'center', color: theme.colors.textSecondary, marginTop: theme.spacing['2xl'] },
-  titleBar: { backgroundColor: '#1E3553', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
+  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
+  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  rowLeft: { fontSize: 18, color: theme.colors.textPrimary },
-  rowRight: { fontSize: 18, color: theme.colors.textPrimary },
-  rowSub: { fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 },
+  rowLeft: { ...theme.typography.body, fontSize: 18, color: theme.colors.textPrimary },
+  rowRight: { ...theme.typography.body, fontSize: 18, color: theme.colors.textPrimary },
+  rowSub: { ...theme.typography.caption, fontSize: 14, color: theme.colors.textSecondary, marginTop: 4 },
   detailBox: { },
   detailInner: { paddingVertical: theme.spacing.md, paddingLeft: theme.spacing['2xl'], gap: theme.spacing.md },
-  contactBtn: { alignSelf: 'flex-start', backgroundColor: '#1E3553', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16 },
-  contactText: { color: '#FFFFFF', fontWeight: '700' },
+  contactBtn: { alignSelf: 'flex-start', backgroundColor: '#1B365D', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 16 },
+  contactText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
   detailText: { color: theme.colors.textPrimary, lineHeight: 22 },
+  calendarBtn: { backgroundColor: '#1B365D', alignSelf: 'center', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 20, marginTop: theme.spacing['2xl'] },
+  calendarText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
 
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   modalCard: { position: 'absolute', left: 24, right: 24, top: '30%', backgroundColor: '#FFFFFF', borderRadius: 12, padding: theme.spacing['2xl'], gap: theme.spacing.md, borderWidth: 1, borderColor: theme.colors.border },
-  modalTitle: { fontWeight: '700', fontSize: 18, marginBottom: theme.spacing.sm, color: theme.colors.textPrimary },
-  modalBtn: { backgroundColor: '#1E3553', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  modalBtnText: { color: '#FFFFFF', fontWeight: '700' },
+  modalTitle: { ...theme.typography.heading, fontWeight: '700', fontSize: 18, marginBottom: theme.spacing.sm, color: theme.colors.textPrimary },
+  modalBtn: { backgroundColor: '#1B365D', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalBtnText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
 });

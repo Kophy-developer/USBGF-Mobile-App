@@ -1,7 +1,7 @@
 // Theme tokens derived from USBGF logo colors
 export const colors = {
   // Primary colors from logo (dark blue)
-  primary: '#1A1A2E',
+  primary: '#1B365D',
   primaryDark: '#0F0F1A',
   
   // Background colors
@@ -22,7 +22,7 @@ export const colors = {
   border: '#E5E5E5',
   placeholder: '#9CA3AF',
   disabled: '#D1D5DB',
-  grey: '#6B7280', // Medium grey for secondary buttons
+  grey: '#3D3935', // Grey for secondary buttons
   
   // OAuth brand colors
   apple: '#000000',
@@ -54,26 +54,31 @@ export const typography = {
     fontSize: 28,
     fontWeight: '600' as const,
     lineHeight: 36,
+    fontFamily: 'DunbarTall-Regular', // Dunbar Tall for headers - falls back to system font if not loaded
   },
   heading: {
     fontSize: 20,
     fontWeight: '600' as const,
     lineHeight: 28,
+    fontFamily: 'DunbarTall-Regular', // Dunbar Tall for headers - falls back to system font if not loaded
   },
   body: {
     fontSize: 16,
     fontWeight: '400' as const,
     lineHeight: 24,
+    fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for body text - falls back to system font if not loaded
   },
   caption: {
     fontSize: 13,
     fontWeight: '400' as const,
     lineHeight: 18,
+    fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for body text - falls back to system font if not loaded
   },
   button: {
     fontSize: 16,
     fontWeight: '600' as const,
     lineHeight: 24,
+    fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for buttons - falls back to system font if not loaded
   },
 } as const;
 

@@ -62,15 +62,15 @@ export const StatsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
-  titleBar: { backgroundColor: '#1E3553', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { color: theme.colors.surface, fontWeight: '700', fontSize: 18 },
+  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
+  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 18 },
   content: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md, marginBottom: theme.spacing['2xl'] },
   card: { flexBasis: '48%', backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: theme.spacing['2xl'], paddingHorizontal: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
-  cardValue: { color: '#4F46E5', fontWeight: '800', fontSize: 24, marginBottom: theme.spacing.xs },
-  cardLabel: { color: theme.colors.textSecondary },
-  sectionHeading: { fontWeight: '800', fontSize: 18, marginBottom: theme.spacing.lg },
-  yearHeading: { fontWeight: '800', color: theme.colors.textPrimary, marginBottom: theme.spacing.md },
+  cardValue: { ...theme.typography.heading, color: '#4F46E5', fontWeight: '800', fontSize: 24, marginBottom: theme.spacing.xs },
+  cardLabel: { ...theme.typography.body, color: theme.colors.textSecondary },
+  sectionHeading: { ...theme.typography.heading, fontWeight: '800', fontSize: 18, marginBottom: theme.spacing.lg },
+  yearHeading: { ...theme.typography.heading, fontWeight: '800', color: theme.colors.textPrimary, marginBottom: theme.spacing.md },
 });
 
 

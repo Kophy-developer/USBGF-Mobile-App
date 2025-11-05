@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   titleBar: {
-    backgroundColor: '#1E3553',
+    backgroundColor: '#1B365D',
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing['3xl'],
     marginHorizontal: theme.spacing['3xl'],
@@ -223,6 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   titleText: {
+    ...theme.typography.heading,
     color: theme.colors.surface,
     fontSize: 22,
     fontWeight: '700',
@@ -239,11 +240,13 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing['3xl'],
   },
   label: {
+    ...theme.typography.title,
     fontSize: 28,
     color: theme.colors.textPrimary,
     fontWeight: '600',
   },
   value: {
+    ...theme.typography.heading,
     marginLeft: theme.spacing['2xl'],
     fontSize: 24,
     color: theme.colors.textPrimary,
@@ -253,7 +256,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing['3xl'],
   },
   addFundsButton: {
-    backgroundColor: '#1E3553',
+    backgroundColor: '#1B365D',
     borderRadius: 12,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing['2xl'],
@@ -261,11 +264,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addFundsText: {
+    ...theme.typography.button,
     color: theme.colors.surface,
     fontSize: 18,
     fontWeight: '700',
   },
   historyTitle: {
+    ...theme.typography.heading,
     fontSize: 20,
     color: theme.colors.textPrimary,
     fontWeight: '600',
@@ -280,11 +285,13 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
   },
   th: {
+    ...theme.typography.body,
     fontSize: 18,
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
   td: {
+    ...theme.typography.body,
     fontSize: 18,
     color: theme.colors.textPrimary,
   },
@@ -314,6 +321,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   menuItemText: {
+    ...theme.typography.body,
     fontSize: 16,
     color: theme.colors.textPrimary,
     fontWeight: '500',
@@ -343,12 +351,14 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   modalTitle: {
+    ...theme.typography.heading,
     fontSize: 18,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
   modalSub: {
+    ...theme.typography.caption,
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
@@ -361,12 +371,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing['2xl'],
   },
   methodSelected: {
-    backgroundColor: '#1E3553',
+    backgroundColor: '#1B365D',
   },
-  methodText: {
+  methodText: { ...theme.typography.body,
     color: '#111',
     fontWeight: '600',
   },
   modalButtons: { gap: theme.spacing.md, marginTop: theme.spacing.lg, alignItems: 'center' },
-  cancelText: { color: '#DC2626', fontWeight: '600' },
+  cancelText: { ...theme.typography.button, color: '#DC2626', fontWeight: '600' },
 });

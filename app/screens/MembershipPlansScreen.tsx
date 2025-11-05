@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   headerBar: {
-    backgroundColor: '#1E3553',
+    backgroundColor: '#1B365D',
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing['3xl'],
     marginHorizontal: theme.spacing['3xl'],
@@ -152,6 +152,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   headerTitle: {
+    ...theme.typography.heading,
     color: theme.colors.surface,
     fontWeight: '700',
     fontSize: 16,
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   switchOuterAnnual: {
-    backgroundColor: '#1E3553',
+    backgroundColor: '#1B365D',
   },
   switchOuterMonthly: {
     backgroundColor: '#DC2626',
@@ -234,6 +235,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
+    ...theme.typography.heading,
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 20,
@@ -242,26 +244,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   planTitle: {
+    ...theme.typography.heading,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   priceLine: {
+    ...theme.typography.body,
     color: theme.colors.textPrimary,
     marginBottom: 6,
   },
   bullet: {
+    ...theme.typography.body,
     color: theme.colors.textPrimary,
   },
   selectBtn: {
     alignSelf: 'flex-start',
     marginTop: theme.spacing.md,
-    backgroundColor: '#1E3553',
+    backgroundColor: '#1B365D',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing['2xl'],
     borderRadius: 6,
   },
   selectBtnText: {
+    ...theme.typography.button,
     color: theme.colors.surface,
     fontWeight: '700',
   },

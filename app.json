@@ -33,6 +33,9 @@
         "projectId": "4d8f7596-6967-47e5-8fe1-056f2cf13724"
       }
     },
-    "owner": "the_mastermind"
+    "owner": "the_mastermind",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

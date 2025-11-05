@@ -92,14 +92,14 @@ export const BracketsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  titleBar: { backgroundColor: '#1E3553', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { color: '#FFF', fontWeight: '700', fontSize: 18 },
+  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
+  titleText: { ...theme.typography.heading, color: '#FFF', fontWeight: '700', fontSize: 18 },
   vContent: { paddingVertical: theme.spacing['2xl'], paddingHorizontal: theme.spacing['3xl'], paddingBottom: 160, gap: theme.spacing['2xl'] },
   roundSection: { width: '100%' },
   roundList: { gap: theme.spacing.md },
   roundHeader: { backgroundColor: '#FFFFFF', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: theme.spacing.md, alignItems: 'center' },
-  roundTitle: { fontWeight: '800', marginBottom: 4 },
-  roundMeta: { color: '#6B7280', fontSize: 12 },
+  roundTitle: { ...theme.typography.heading, fontWeight: '800', marginBottom: 4 },
+  roundMeta: { ...theme.typography.caption, color: '#6B7280', fontSize: 12 },
   matchBox: { backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: theme.spacing.md },
   playerRow: { paddingVertical: 8, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   winnerRow: { backgroundColor: '#E6EEF8' },

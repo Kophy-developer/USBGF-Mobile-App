@@ -1,0 +1,18 @@
+0 verbose cli /Users/newmastermind/.nvm/versions/node/v22.18.0/bin/node /Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@10.9.3
+2 info using node@v22.18.0
+3 silly config load:file:/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/newmastermind/UBGSF-App/.npmrc
+5 silly config load:file:/Users/newmastermind/.nvm/versions/node/v22.18.0/etc/npmrc
+6 verbose title npm exec expo start --device iPhone 16 Pro Max
+7 verbose argv "exec" "--" "expo" "start" "--device" "iPhone 16 Pro Max"
+8 verbose logfile logs-max:10 dir:/Users/newmastermind/UBGSF-App/.npm-cache/_logs/2025-11-02T06_57_24_569Z-
+9 verbose logfile /Users/newmastermind/UBGSF-App/.npm-cache/_logs/2025-11-02T06_57_24_569Z-debug-0.log
+10 silly logfile start cleaning logs, removing 1 files
+11 silly logfile done cleaning log files
+12 verbose cwd /Users/newmastermind/UBGSF-App
+13 verbose os Darwin 24.6.0
+14 verbose node v22.18.0
+15 verbose npm  v10.9.3
+16 verbose exit 1
+17 verbose code 1

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ABTDataFetcher } from '../components/ABTDataFetcher';
 
 // Import screens
 import { SplashScreen } from '../screens/SplashScreen';
@@ -27,6 +28,7 @@ import { PaymentScreen } from '../screens/PaymentScreen';
 import { ContactScreen } from '../screens/ContactScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { BracketsScreen } from '../screens/BracketsScreen';
+import { ABTCalendarScreen } from '../screens/ABTCalendarScreen';
 
 // Auth Stack Param List
 export type AuthStackParamList = {
@@ -56,6 +58,7 @@ export type RootStackParamList = {
   Registration: undefined;
   Payment: { planKey: string; billing: 'annual' | 'monthly' };
   Contact: { name: string; message: string };
+  ABTCalendar: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -63,16 +66,48 @@ const AuthStack = createStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const HomeStack = createStackNavigator();
 
+// Helper component for back button
+const BackButton: React.FC<{ onPress: () => void }> = ({ onPress }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    style={{
+      paddingHorizontal: 20,
+      paddingVertical: 8,
+      marginLeft: 4,
+    }}
+  >
+    <Text style={{ fontSize: 24, color: '#FFFFFF' }}>←</Text>
+  </TouchableOpacity>
+);
+
 // Auth Stack Navigator
 const AuthStackNavigator: React.FC = () => {
   return (
     <AuthStack.Navigator
-      screenOptions={{
-        headerShown: false,
+      screenOptions={({ navigation }) => ({
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#1B365D',
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontFamily: 'DunbarTall-Regular',
+          fontSize: 20,
+          fontWeight: '600',
+        },
+        headerBackTitleVisible: false,
         gestureEnabled: true,
-      }}
+        headerLeft: ({ canGoBack }) => 
+          canGoBack ? (
+            <BackButton onPress={() => navigation.goBack()} />
+          ) : null,
+      })}
     >
-      <AuthStack.Screen name="SignIn" component={SignInScreen} />
+      <AuthStack.Screen 
+        name="SignIn" 
+        component={SignInScreen}
+        options={{ headerShown: false }}
+      />
       <AuthStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <AuthStack.Screen name="LegalWebview" component={LegalWebview} />
     </AuthStack.Navigator>
@@ -82,15 +117,48 @@ const AuthStackNavigator: React.FC = () => {
 // Home stack keeps bottom tabs visible across pages like Events, Registration, etc.
 const HomeStackNavigator: React.FC = () => {
   return (
-    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-      <HomeStack.Screen name="Home" component={MainDashboardScreen} />
+    <HomeStack.Navigator 
+      screenOptions={({ navigation }) => ({
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#1B365D',
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontFamily: 'DunbarTall-Regular',
+          fontSize: 20,
+          fontWeight: '600',
+          color: '#FFFFFF',
+        },
+        headerBackTitleVisible: false,
+        gestureEnabled: true,
+        headerLeft: ({ canGoBack }) => 
+          canGoBack ? (
+            <BackButton onPress={() => navigation.goBack()} />
+          ) : null,
+      })}
+    >
+      <HomeStack.Screen 
+        name="Home" 
+        component={MainDashboardScreen}
+        options={{ headerShown: false }}
+      />
       <HomeStack.Screen name="Events" component={EventsScreen} />
       <HomeStack.Screen name="Registration" component={RegistrationScreen} />
       <HomeStack.Screen name="AccountBalance" component={AccountBalanceScreen} />
       <HomeStack.Screen name="MembershipPlans" component={MembershipPlansScreen} />
-      <HomeStack.Screen name="Payment" component={PaymentScreen} />
+      <HomeStack.Screen 
+        name="Payment" 
+        component={PaymentScreen}
+        options={{ headerLeft: () => null }} // Hide back button on payment page
+      />
       <HomeStack.Screen name="Stats" component={StatsScreen} />
       <HomeStack.Screen name="Brackets" component={BracketsScreen} />
+      <HomeStack.Screen 
+        name="ABTCalendar" 
+        component={ABTCalendarScreen}
+        options={{ headerShown: false }}
+      />
     </HomeStack.Navigator>
   );
 };
@@ -98,9 +166,27 @@ const HomeStackNavigator: React.FC = () => {
 // Main Tab Navigator
 const MainTabNavigator: React.FC = () => {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
+    <>
+      <ABTDataFetcher />
+      <Tab.Navigator
+      screenOptions={({ navigation }) => ({
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#1B365D',
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontFamily: 'DunbarTall-Regular',
+          fontSize: 20,
+          fontWeight: '600',
+          color: '#FFFFFF',
+        },
+        headerBackTitleVisible: false,
+        gestureEnabled: true,
+        headerLeft: ({ canGoBack }) => 
+          canGoBack ? (
+            <BackButton onPress={() => navigation.goBack()} />
+          ) : null,
         tabBarStyle: {
           position: 'absolute',
           left: 16,
@@ -126,10 +212,11 @@ const MainTabNavigator: React.FC = () => {
           fontWeight: '500',
           color: '#111111',
           marginTop: -2, // bring label slightly closer to icon
+          fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for body text
         },
-        tabBarActiveTintColor: '#1A1A2E',
+        tabBarActiveTintColor: '#1B365D',
         tabBarInactiveTintColor: '#5A5A5A',
-      }}
+      })}
     >
       <Tab.Screen 
         name="Dashboard" 
@@ -139,40 +226,53 @@ const MainTabNavigator: React.FC = () => {
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color, marginBottom: -2 }}>🌐</Text>
           ),
-          // use global label style for consistent sizing
+          headerShown: false, // HomeStack handles its own header
         }}
       />
       <Tab.Screen 
         name="Matches" 
         component={MatchesScreen}
-        options={{
+        options={({ navigation }) => ({
           tabBarLabel: 'Matches',
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color, marginBottom: -2 }}>🎲</Text>
           ),
-        }}
+          title: 'Matches',
+          headerLeft: () => (
+            <BackButton onPress={() => navigation.goBack()} />
+          ),
+        })}
       />
       <Tab.Screen 
         name="Profile" 
         component={MembershipProfileScreen}
-        options={{
+        options={({ navigation }) => ({
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color, marginBottom: -2 }}>👤</Text>
           ),
-        }}
+          title: 'Profile',
+          headerLeft: () => (
+            <BackButton onPress={() => navigation.goBack()} />
+          ),
+        })}
       />
       <Tab.Screen 
         name="Messages" 
         component={MessagesScreen}
-        options={{
+        options={({ navigation }) => ({
           tabBarLabel: 'Messages',
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color, marginBottom: -2 }}>💬</Text>
           ),
-        }}
+          title: 'Messages',
+          headerLeft: () => (
+            <BackButton onPress={() => navigation.goBack()} />
+          ),
+        })}
       />
     </Tab.Navigator>
+    </>
   );
 };
 
@@ -183,9 +283,24 @@ export const Navigation: React.FC = () => {
         <StatusBar style="light" backgroundColor="#1A1A2E" />
         <Stack.Navigator
           initialRouteName="Splash"
-          screenOptions={{
-            headerShown: false,
+          screenOptions={({ navigation }) => ({
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#1B365D',
+            },
+            headerTintColor: '#FFFFFF',
+            headerTitleStyle: {
+              fontFamily: 'DunbarTall-Regular',
+              fontSize: 20,
+              fontWeight: '600',
+              color: '#FFFFFF',
+            },
+            headerBackTitleVisible: false,
             gestureEnabled: true,
+            headerLeft: ({ canGoBack }) => 
+              canGoBack ? (
+                <BackButton onPress={() => navigation.goBack()} />
+              ) : null,
             cardStyleInterpolator: ({ current, layouts }) => {
               return {
                 cardStyle: {
@@ -200,12 +315,12 @@ export const Navigation: React.FC = () => {
                 },
               };
             },
-          }}
+          })}
         >
-          <Stack.Screen name="Splash" component={SplashScreen} />
-          <Stack.Screen name="Onboarding" component={OnboardingCarousel} />
-          <Stack.Screen name="AuthStack" component={AuthStackNavigator} />
-          <Stack.Screen name="MainApp" component={MainTabNavigator} />
+          <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Onboarding" component={OnboardingCarousel} options={{ headerShown: false }} />
+          <Stack.Screen name="AuthStack" component={AuthStackNavigator} options={{ headerShown: false }} />
+          <Stack.Screen name="MainApp" component={MainTabNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="Events" component={EventsScreen} />
           <Stack.Screen name="AccountBalance" component={AccountBalanceScreen} />
           <Stack.Screen name="MembershipPlans" component={MembershipPlansScreen} />

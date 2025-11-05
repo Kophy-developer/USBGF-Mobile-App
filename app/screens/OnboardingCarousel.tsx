@@ -8,7 +8,6 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
@@ -97,7 +96,7 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
   const buttonTitle = currentIndex === onboardingData.length - 1 ? 'Get started' : 'Next';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Carousel */}
       <View style={styles.carouselContainer}>
         <FlatList
@@ -151,7 +150,7 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
           />
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

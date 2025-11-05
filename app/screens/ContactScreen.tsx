@@ -44,7 +44,7 @@ export const ContactScreen: React.FC<Props> = ({ route, navigation }) => {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', android: undefined })}>
         <View style={styles.content}> 
-          <Text style={styles.contactName}>{name}</Text>
+        <Text style={styles.contactName}>{name}</Text>
           <ScrollView style={styles.chat} contentContainerStyle={styles.chatContent} showsVerticalScrollIndicator={false}>
             {messages.map((m) => (
               <View key={m.id} style={[styles.bubbleRow, m.from === 'me' ? styles.bubbleRowMe : styles.bubbleRowThem]}>
@@ -106,11 +106,11 @@ const styles = StyleSheet.create({
   logo: { width: 240, height: 120 },
   searchButton: { padding: theme.spacing.sm },
   searchIcon: { fontSize: 45, color: theme.colors.textPrimary },
-  titleBar: { backgroundColor: '#1E3553', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
+  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
+  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
 
   content: { flex: 1, paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'] },
-  contactName: { fontSize: 28, color: theme.colors.textPrimary, fontWeight: '700', marginBottom: theme.spacing['4xl'] },
+  contactName: { ...theme.typography.title, fontSize: 28, color: theme.colors.textPrimary, fontWeight: '700', marginBottom: theme.spacing['4xl'] },
   chat: { flex: 1 },
   chatContent: { paddingBottom: theme.spacing['2xl'] },
   bubbleRow: { marginBottom: theme.spacing.md, flexDirection: 'row' },
@@ -119,18 +119,18 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '80%', borderRadius: 18, paddingVertical: 10, paddingHorizontal: 14 },
   bubbleMe: { backgroundColor: '#0B5FFF' },
   bubbleThem: { backgroundColor: '#F0F0F0' },
-  bubbleText: { fontSize: 16, color: '#111' },
+  bubbleText: { ...theme.typography.body, fontSize: 16, color: '#111' },
   bubbleTextMe: { color: '#FFFFFF' },
 
   inputBar: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, backgroundColor: '#F8F8F8', borderTopWidth: 1, borderTopColor: '#E5E5E5' },
   input: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 14, paddingVertical: Platform.select({ ios: 10, android: 6 }), borderWidth: 1, borderColor: '#E5E5E5' },
-  sendBtn: { backgroundColor: '#1E3553', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 16 },
-  sendBtnText: { color: '#FFFFFF', fontWeight: '700' },
+  sendBtn: { backgroundColor: '#1B365D', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 16 },
+  sendBtnText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
 
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 900 },
   menuDropdown: { position: 'absolute', top: 120, left: theme.spacing['3xl'], width: 220, backgroundColor: '#FFFFFF', borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, overflow: 'hidden', zIndex: 1000 },
   menuItem: { paddingVertical: theme.spacing.lg, paddingHorizontal: theme.spacing['2xl'], backgroundColor: '#FFFFFF' },
-  menuItemText: { fontSize: 16, color: theme.colors.textPrimary, fontWeight: '500' },
+  menuItemText: { ...theme.typography.body, fontSize: 16, color: theme.colors.textPrimary, fontWeight: '500' },
   logoutText: { color: '#B91C1C' },
   menuDivider: { height: 1, backgroundColor: theme.colors.border },
 });

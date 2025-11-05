@@ -1,0 +1,76 @@
+0 verbose cli /Users/newmastermind/.nvm/versions/node/v22.18.0/bin/node /Users/newmastermind/.nvm/versions/node/v22.18.0/bin/npm
+1 info using npm@10.9.3
+2 info using node@v22.18.0
+3 silly config load:file:/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/newmastermind/UBGSF-App/.npmrc
+5 silly config load:file:/Users/newmastermind/.npmrc
+6 silly config load:file:/Users/newmastermind/.nvm/versions/node/v22.18.0/etc/npmrc
+7 verbose title npm install expo@~51.0.28 react-native@0.74.3
+8 verbose argv "install" "expo@~51.0.28" "react-native@0.74.3" "--save"
+9 verbose logfile logs-max:10 dir:/Users/newmastermind/UBGSF-App/.npm-cache/_logs/2025-11-01T20_23_39_543Z-
+10 verbose logfile /Users/newmastermind/UBGSF-App/.npm-cache/_logs/2025-11-01T20_23_39_543Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
+13 silly packumentCache heap:2197815296 maxSize:549453824 maxEntrySize:274726912
+14 silly idealTree buildDeps
+15 silly fetch manifest expo@~51.0.28
+16 silly packumentCache full:https://registry.npmjs.org/expo cache-miss
+17 http fetch GET 200 https://registry.npmjs.org/expo 1792ms (cache revalidated)
+18 silly packumentCache full:https://registry.npmjs.org/expo set size:3320156 disposed:false
+19 silly fetch manifest react-native@0.74.3
+20 silly packumentCache full:https://registry.npmjs.org/react-native cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/react-native 499ms (cache revalidated)
+22 silly packumentCache full:https://registry.npmjs.org/react-native set size:14303389 disposed:false
+23 silly fetch manifest @types/react@~18.3.12
+24 silly packumentCache full:https://registry.npmjs.org/@types%2freact cache-miss
+25 http fetch GET 200 https://registry.npmjs.org/@types%2freact 323ms (cache revalidated)
+26 silly packumentCache full:https://registry.npmjs.org/@types%2freact set size:2504314 disposed:false
+27 silly fetch manifest react@18.3.1
+28 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+29 http fetch GET 200 https://registry.npmjs.org/react 1890ms (cache updated)
+30 silly packumentCache full:https://registry.npmjs.org/react set size:undefined disposed:false
+31 silly fetch manifest react@18.2.0
+32 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+33 http cache https://registry.npmjs.org/react 22ms (cache hit)
+34 silly packumentCache full:https://registry.npmjs.org/react set size:6220657 disposed:false
+35 verbose stack Error: unable to resolve dependency tree
+35 verbose stack     at #failPeerConflict (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:1363:25)
+35 verbose stack     at #loadPeerSet (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:1329:33)
+35 verbose stack     at async #buildDepStep (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:904:11)
+35 verbose stack     at async Arborist.buildIdealTree (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:181:7)
+35 verbose stack     at async Promise.all (index 1)
+35 verbose stack     at async Arborist.reify (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:131:5)
+35 verbose stack     at async Install.exec (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/lib/commands/install.js:150:5)
+35 verbose stack     at async Npm.exec (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/lib/npm.js:207:9)
+35 verbose stack     at async module.exports (/Users/newmastermind/.nvm/versions/node/v22.18.0/lib/node_modules/npm/lib/cli/entry.js:74:5)
+36 error code ERESOLVE
+37 error ERESOLVE unable to resolve dependency tree
+38 error
+39 error While resolving: ubgsf-app@1.0.0
+39 error Found: react@18.3.1
+39 error node_modules/react
+39 error   react@"18.3.1" from the root project
+39 error
+39 error Could not resolve dependency:
+39 error peer react@"18.2.0" from react-native@0.74.3
+39 error node_modules/react-native
+39 error   react-native@"0.74.3" from the root project
+39 error
+39 error Fix the upstream dependency conflict, or retry
+39 error this command with --force or --legacy-peer-deps
+39 error to accept an incorrect (and potentially broken) dependency resolution.
+40 error
+40 error
+40 error For a full report see:
+40 error /Users/newmastermind/UBGSF-App/.npm-cache/_logs/2025-11-01T20_23_39_543Z-eresolve-report.txt
+41 silly unfinished npm timer reify 1762028620194
+42 silly unfinished npm timer reify:loadTrees 1762028620195
+43 silly unfinished npm timer idealTree:buildDeps 1762028620561
+44 silly unfinished npm timer idealTree:#root 1762028620562
+45 verbose cwd /Users/newmastermind/UBGSF-App
+46 verbose os Darwin 24.6.0
+47 verbose node v22.18.0
+48 verbose npm  v10.9.3
+49 verbose exit 1
+50 verbose code 1
+51 error A complete log of this run can be found in: /Users/newmastermind/UBGSF-App/.npm-cache/_logs/2025-11-01T20_23_39_543Z-debug-0.log

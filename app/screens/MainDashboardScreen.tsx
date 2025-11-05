@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-	View,
-	Text,
-	StyleSheet,
-	TouchableOpacity,
-	ScrollView,
-	Dimensions,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
   Image,
   Pressable,
 } from 'react-native';
@@ -18,7 +18,7 @@ import { theme } from '../theme/tokens';
 type MainDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainApp'>;
 
 interface MainDashboardScreenProps {
-	navigation: MainDashboardScreenNavigationProp;
+  navigation: MainDashboardScreenNavigationProp;
 }
 
 const { width } = Dimensions.get('window');
@@ -26,29 +26,29 @@ const buttonWidth = (width - theme.spacing['3xl'] * 2 - theme.spacing.lg) / 2;
 
 export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ navigation }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-	const handleMatches = () => {
-		navigation.navigate('Matches' as any);
-	};
+  const handleMatches = () => {
+    navigation.navigate('Matches' as any);
+  };
 
   const handleRegister = () => {
     navigation.navigate('Dashboard' as any, { screen: 'Registration' } as any);
   };
 
-	const handleProfile = () => {
-		navigation.navigate('Profile' as any);
-	};
+  const handleProfile = () => {
+    navigation.navigate('Profile' as any);
+  };
 
   const handleStats = () => {
     navigation.navigate('Dashboard' as any, { screen: 'Stats' } as any);
   };
 
-	const handleBrackets = () => {
+  const handleBrackets = () => {
     navigation.navigate('Dashboard' as any, { screen: 'Brackets' } as any);
-	};
+  };
 
-	const handleMessage = () => {
-		navigation.navigate('Messages' as any);
-	};
+  const handleMessage = () => {
+    navigation.navigate('Messages' as any);
+  };
 
   const handleEvents = () => {
     navigation.navigate('Dashboard' as any, { screen: 'Events' } as any);
@@ -62,42 +62,41 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
     navigation.navigate('Dashboard' as any, { screen: 'MembershipPlans' } as any);
   };
 
-	return (
-		<SafeAreaView style={styles.container} edges={['left','right']}>
-			{/* Header */}
-			<View style={styles.header}>
+  return (
+		<SafeAreaView style={styles.container} edges={['top', 'left','right']}>
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
-					<Text style={styles.menuIcon}>☰</Text>
-				</TouchableOpacity>
+          <Text style={styles.menuIcon}>☰</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../assets/USBGF_com_logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityLabel="USBGF Logo"
+          />
+        </View>
+        
+        {/* Invisible spacer to balance the hamburger menu and center the logo */}
+        <View style={styles.spacer} />
+      </View>
 
-				<View style={styles.logoContainer}>
-					<Image
-						source={require('../assets/USBGF_com_logo.png')}
-						style={styles.logo}
-						resizeMode="contain"
-						accessibilityLabel="USBGF Logo"
-					/>
-				</View>
-
-				<TouchableOpacity style={styles.searchButton}>
-					<Text style={styles.searchIcon}>⌕</Text>
-				</TouchableOpacity>
-			</View>
-
-			{/* Main Content */}
-			<ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-				{/* Feature Grid */}
-				<View style={styles.featureGrid}>
-					{/* Row 1 */}
-					<View style={styles.buttonRow}>
-						<TouchableOpacity 
-							style={[styles.featureButton, styles.greyButton]} 
-							onPress={handleMatches}
-						>
-							<Text style={styles.buttonIcon}>🎲</Text>
-							<Text style={styles.buttonText}>Matches</Text>
-						</TouchableOpacity>
-
+      {/* Main Content */}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Feature Grid */}
+        <View style={styles.featureGrid}>
+          {/* Row 1 */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.featureButton, styles.greyButton]} 
+              onPress={handleMatches}
+            >
+              <Text style={styles.buttonIcon}>🎲</Text>
+              <Text style={styles.buttonText}>Matches</Text>
+            </TouchableOpacity>
+            
             <TouchableOpacity 
               style={[styles.featureButton, styles.blueButton]} 
               onPress={handleEvents}
@@ -105,46 +104,46 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
               <Text style={styles.buttonIcon}>📅</Text>
               <Text style={styles.buttonText}>Events</Text>
             </TouchableOpacity>
-					</View>
+          </View>
 
-					{/* Row 2 */}
-					<View style={styles.buttonRow}>
-						<TouchableOpacity 
-							style={[styles.featureButton, styles.greyButton]} 
-							onPress={handleProfile}
-						>
-							<Text style={styles.buttonIcon}>👤</Text>
-							<Text style={styles.buttonText}>Profile</Text>
-						</TouchableOpacity>
+          {/* Row 2 */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.featureButton, styles.greyButton]} 
+              onPress={handleProfile}
+            >
+              <Text style={styles.buttonIcon}>👤</Text>
+              <Text style={styles.buttonText}>Profile</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.featureButton, styles.blueButton]} 
+              onPress={handleStats}
+            >
+              <Text style={styles.buttonIcon}>📊</Text>
+              <Text style={styles.buttonText}>Stats</Text>
+            </TouchableOpacity>
+          </View>
 
-						<TouchableOpacity 
-							style={[styles.featureButton, styles.blueButton]} 
-							onPress={handleStats}
-						>
-							<Text style={styles.buttonIcon}>📊</Text>
-							<Text style={styles.buttonText}>Stats</Text>
-						</TouchableOpacity>
-					</View>
-
-					{/* Row 3 */}
-					<View style={styles.buttonRow}>
-						<TouchableOpacity 
-							style={[styles.featureButton, styles.greyButton]} 
-							onPress={handleBrackets}
-						>
-							<Text style={styles.buttonIcon}>🏆</Text>
-							<Text style={styles.buttonText}>Brackets</Text>
-						</TouchableOpacity>
-
-						<TouchableOpacity 
-							style={[styles.featureButton, styles.blueButton]} 
-							onPress={handleMessage}
-						>
-							<Text style={styles.buttonIcon}>💬</Text>
-							<Text style={styles.buttonText}>Message</Text>
-						</TouchableOpacity>
-					</View>
-				</View>
+          {/* Row 3 */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.featureButton, styles.greyButton]} 
+              onPress={handleBrackets}
+            >
+              <Text style={styles.buttonIcon}>🏆</Text>
+              <Text style={styles.buttonText}>Brackets</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.featureButton, styles.blueButton]} 
+              onPress={handleMessage}
+            >
+              <Text style={styles.buttonIcon}>💬</Text>
+              <Text style={styles.buttonText}>Message</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
 				{/* Quick Actions removed as requested */}
 			</ScrollView>
@@ -165,60 +164,60 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
               <Text style={styles.menuItemText}>View Events</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity
+          <TouchableOpacity 
               style={styles.menuItem}
               onPress={() => {
                 setIsMenuOpen(false);
                 navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any);
               }}
               accessibilityRole="button"
-            >
+          >
               <Text style={styles.menuItemText}>Account Balance</Text>
-            </TouchableOpacity>
+          </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity
+          <TouchableOpacity 
               style={styles.menuItem}
               onPress={() => {
                 setIsMenuOpen(false);
                 navigation.navigate('Dashboard' as any, { screen: 'MembershipPlans' } as any);
               }}
               accessibilityRole="button"
-            >
+          >
               <Text style={styles.menuItemText}>Membership Plan</Text>
-            </TouchableOpacity>
+          </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity
+          <TouchableOpacity 
               style={styles.menuItem}
               onPress={() => {
                 setIsMenuOpen(false);
                 navigation.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] });
               }}
               accessibilityRole="button"
-            >
+          >
               <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+        </View>
         </>
       )}
-		</SafeAreaView>
-	);
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: theme.colors.surface,
-	},
-		header: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-		paddingHorizontal: theme.spacing['3xl'],
-				paddingVertical: theme.spacing.sm,
-				paddingTop: theme.spacing['2xl'],
-		backgroundColor: theme.colors.surface,
-		minHeight: 120, // accommodate larger logo
-	},
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing['3xl'],
+    paddingVertical: theme.spacing.lg,
+    backgroundColor: theme.colors.surface, // White background as per design
+    minHeight: 80, // Reduced height
+    position: 'relative',
+  },
   backdrop: {
     position: 'absolute',
     top: 0,
@@ -228,24 +227,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.2)',
     zIndex: 900,
   },
-	menuButton: {
-		padding: theme.spacing.sm,
-	},
-	menuIcon: {
+  menuButton: {
+    padding: theme.spacing.sm,
+    width: 50, // Fixed width to balance with spacer
+    zIndex: 10, // Ensure it's above the logo container
+  },
+  menuIcon: {
 		fontSize: 30,
-		color: theme.colors.textPrimary,
-	},
-	logoContainer: {
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-	logo: {
-		width: 240,
-		height: 120,
+    color: theme.colors.primary, // Dark blue icon for white background
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    pointerEvents: 'none', // Allow touches to pass through to buttons below
+  },
+  logo: {
+		width: 180,
+		height: 60,
 	},
   menuDropdown: {
     position: 'absolute',
-    top: 120, // below header
+    top: 80, // below header
     left: theme.spacing['3xl'],
     width: 220,
     backgroundColor: '#FFFFFF',
@@ -266,7 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   menuItemText: {
-    fontSize: 16,
+    ...theme.typography.body,
     color: theme.colors.textPrimary,
     fontWeight: '500',
   },
@@ -277,70 +283,67 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: theme.colors.border,
   },
-	searchButton: {
-		padding: theme.spacing.sm,
-	},
-	searchIcon: {
-		fontSize: 45,
-		color: theme.colors.textPrimary,
-	},
-	content: {
-		flex: 1,
-		paddingHorizontal: theme.spacing['3xl'],
-	},
-	featureGrid: {
-		marginTop: theme.spacing['2xl'],
-	},
-	buttonRow: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		marginBottom: theme.spacing.lg,
-	},
-	featureButton: {
-		width: buttonWidth,
+  spacer: {
+    width: 50, // Same width as menuButton to balance
+    zIndex: 10, // Ensure it's above the logo container
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: theme.spacing['3xl'],
+  },
+  featureGrid: {
+    marginTop: theme.spacing['2xl'],
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
+  },
+  featureButton: {
+    width: buttonWidth,
 		height: buttonWidth, // make square using existing width
-		borderRadius: theme.radius.lg,
-		justifyContent: 'center',
-		alignItems: 'center',
-		shadowColor: '#000',
+    borderRadius: theme.radius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
 		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 3,
-	},
-	greyButton: {
-		backgroundColor: '#6B7280',
-	},
-	blueButton: {
-		backgroundColor: theme.colors.primary,
-	},
-	buttonIcon: {
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  greyButton: {
+    backgroundColor: '#3D3935',
+  },
+  blueButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  buttonIcon: {
 		fontSize: 44,
-		color: theme.colors.surface,
-		marginBottom: theme.spacing.sm,
-	},
-	buttonText: {
-		fontSize: 18,
-		fontWeight: '600',
-		color: theme.colors.surface,
-	},
-	quickActions: {
-		marginTop: theme.spacing['3xl'],
-		marginBottom: theme.spacing['2xl'],
-	},
-	quickActionButton: {
-		backgroundColor: theme.colors.surface,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		paddingVertical: theme.spacing.lg,
-		paddingHorizontal: theme.spacing['2xl'],
-		marginBottom: theme.spacing.md,
-		alignItems: 'center',
-	},
-	quickActionText: {
-		fontSize: 16,
-		fontWeight: '500',
-		color: theme.colors.textPrimary,
-	},
+    color: theme.colors.surface,
+    marginBottom: theme.spacing.sm,
+  },
+  buttonText: {
+    ...theme.typography.button,
+    fontSize: 18,
+    color: theme.colors.surface,
+  },
+  quickActions: {
+    marginTop: theme.spacing['3xl'],
+    marginBottom: theme.spacing['2xl'],
+  },
+  quickActionButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing['2xl'],
+    marginBottom: theme.spacing.md,
+    alignItems: 'center',
+  },
+  quickActionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.textPrimary,
+  },
 });

@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.button,
   },
   primary: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary, // Will use #1B365D
   },
   secondary: {
     backgroundColor: theme.colors.surface,
