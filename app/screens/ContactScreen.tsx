@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { StackScreenProps } from '@react-navigation/stack';
@@ -16,7 +16,6 @@ export const ContactScreen: React.FC<Props> = ({ route, navigation }) => {
     ...(message ? [{ id: 'm1', text: message, from: 'them' as const }] : []),
     { id: 'm2', text: 'Yay! See you then x', from: 'me' },
   ]);
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -25,36 +24,28 @@ export const ContactScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left','right']}>
+    <SafeAreaView style={styles.container} edges={['left','right','top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
-          <Text style={styles.menuIcon}>☰</Text>
-        </TouchableOpacity>
-        <View style={styles.logoContainer}>
-          <Image source={require('../assets/USBGF_com_logo.png')} style={styles.logo} resizeMode="contain" accessibilityLabel="USBGF Logo" />
+        <View style={styles.profileContainer}>
+          <Image
+            source={{ uri: 'https://i.pravatar.cc/150?img=12' }}
+            style={styles.avatar}
+            defaultSource={require('../assets/USBGF_com_logo.png')}
+          />
+          <Text style={styles.contactName}>{name}</Text>
         </View>
-        <TouchableOpacity style={styles.searchButton}>
-          <Text style={styles.searchIcon}>⌕</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.titleBar}>
-        <Text style={styles.titleText}>Contact</Text>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', android: undefined })}>
-        <View style={styles.content}> 
-        <Text style={styles.contactName}>{name}</Text>
-          <ScrollView style={styles.chat} contentContainerStyle={styles.chatContent} showsVerticalScrollIndicator={false}>
-            {messages.map((m) => (
-              <View key={m.id} style={[styles.bubbleRow, m.from === 'me' ? styles.bubbleRowMe : styles.bubbleRowThem]}>
-                <View style={[styles.bubble, m.from === 'me' ? styles.bubbleMe : styles.bubbleThem]}>
-                  <Text style={[styles.bubbleText, m.from === 'me' && styles.bubbleTextMe]}>{m.text}</Text>
-                </View>
+        <ScrollView style={styles.chat} contentContainerStyle={styles.chatContent} showsVerticalScrollIndicator={false}>
+          {messages.map((m) => (
+            <View key={m.id} style={[styles.bubbleRow, m.from === 'me' ? styles.bubbleRowMe : styles.bubbleRowThem]}>
+              <View style={[styles.bubble, m.from === 'me' ? styles.bubbleMe : styles.bubbleThem]}>
+                <Text style={[styles.bubbleText, m.from === 'me' && styles.bubbleTextMe]}>{m.text}</Text>
               </View>
-            ))}
-          </ScrollView>
-        </View>
+            </View>
+          ))}
+        </ScrollView>
 
         <View style={styles.inputBar}>
           <TextInput
@@ -70,49 +61,41 @@ export const ContactScreen: React.FC<Props> = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-
-      {isMenuOpen && (
-        <>
-          <Pressable style={styles.backdrop} onPress={() => setIsMenuOpen(false)} />
-          <View style={styles.menuDropdown}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Dashboard' as any, { screen: 'Events' } as any); }}>
-              <Text style={styles.menuItemText}>View Events</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any); }}>
-              <Text style={styles.menuItemText}>Account Balance</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Dashboard' as any, { screen: 'MembershipPlans' } as any); }}>
-              <Text style={styles.menuItemText}>Membership Plan</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] }); }}>
-              <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: theme.spacing['3xl'], paddingVertical: theme.spacing.sm, paddingTop: theme.spacing['2xl'], backgroundColor: theme.colors.surface, minHeight: 120 },
-  menuButton: { padding: theme.spacing.sm },
-  menuIcon: { fontSize: 30, color: theme.colors.textPrimary },
-  logoContainer: { alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 240, height: 120 },
-  searchButton: { padding: theme.spacing.sm },
-  searchIcon: { fontSize: 45, color: theme.colors.textPrimary },
-  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
-
-  content: { flex: 1, paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'] },
-  contactName: { ...theme.typography.title, fontSize: 28, color: theme.colors.textPrimary, fontWeight: '700', marginBottom: theme.spacing['4xl'] },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing['3xl'],
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  profileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  contactName: {
+    ...theme.typography.heading,
+    fontSize: 18,
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+  },
   chat: { flex: 1 },
-  chatContent: { paddingBottom: theme.spacing['2xl'] },
+  chatContent: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: theme.spacing['2xl'] },
   bubbleRow: { marginBottom: theme.spacing.md, flexDirection: 'row' },
   bubbleRowMe: { justifyContent: 'flex-end' },
   bubbleRowThem: { justifyContent: 'flex-start' },
@@ -122,15 +105,8 @@ const styles = StyleSheet.create({
   bubbleText: { ...theme.typography.body, fontSize: 16, color: '#111' },
   bubbleTextMe: { color: '#FFFFFF' },
 
-  inputBar: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 8, backgroundColor: '#F8F8F8', borderTopWidth: 1, borderTopColor: '#E5E5E5' },
+  inputBar: { flexDirection: 'row', alignItems: 'center', padding: 10, paddingTop: 10, paddingBottom: 10, marginBottom: 25, gap: 8, backgroundColor: '#F8F8F8', borderTopWidth: 1, borderTopColor: '#E5E5E5' },
   input: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 14, paddingVertical: Platform.select({ ios: 10, android: 6 }), borderWidth: 1, borderColor: '#E5E5E5' },
   sendBtn: { backgroundColor: '#1B365D', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 16 },
   sendBtnText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
-
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 900 },
-  menuDropdown: { position: 'absolute', top: 120, left: theme.spacing['3xl'], width: 220, backgroundColor: '#FFFFFF', borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, overflow: 'hidden', zIndex: 1000 },
-  menuItem: { paddingVertical: theme.spacing.lg, paddingHorizontal: theme.spacing['2xl'], backgroundColor: '#FFFFFF' },
-  menuItemText: { ...theme.typography.body, fontSize: 16, color: theme.colors.textPrimary, fontWeight: '500' },
-  logoutText: { color: '#B91C1C' },
-  menuDivider: { height: 1, backgroundColor: theme.colors.border },
 });

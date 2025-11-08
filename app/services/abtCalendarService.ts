@@ -2,25 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ABTEvent {
   id: string;
-  dateRange: string; // e.g., "18 - 24 Nov"
-  title: string; // Event name
-  location: string; // Event location/venue
-  month: string; // Full month name (e.g., "November")
-  year: string; // Year (e.g., "2025")
+  dateRange: string;
+  title: string;
+  location: string;
+  month: string;
+  year: string;
 }
 
 const ABT_CALENDAR_URL = 'https://usbgf.org/abt-calendar/';
 const CACHE_KEY = 'abt_calendar_events';
 const CACHE_TIMESTAMP_KEY = 'abt_calendar_timestamp';
 
-// In-memory cache (cleared on app close)
 let inMemoryEvents: ABTEvent[] | null = null;
 let isFetching = false;
 
-/**
- * Seed data - manually extracted events as fallback
- * This ensures the app always has data to display
- */
 const SEED_EVENTS: ABTEvent[] = [
   {
     id: 'event-1-nov-2025',
@@ -120,25 +115,16 @@ const SEED_EVENTS: ABTEvent[] = [
   },
 ];
 
-/**
- * Parse HTML content to extract ABT events
- * Based on the exact structure from https://usbgf.org/abt-calendar/
- */
 export function parseABTEventsFromHTML(html: string): ABTEvent[] {
   const events: ABTEvent[] = [];
   
   try {
-    // Remove script and style tags
     const cleanHtml = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
                           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
     
-    // Pattern to match month/year headers like "November 2025"
     const monthYearPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/gi;
-    
-    // Pattern to match date ranges like "18 - 24 Nov" or "04 - 07 Dec" or "26 Feb - 01 Mar"
     const dateRangePattern = /(\d{1,2}\s*[-–—]\s*\d{1,2}\s+[A-Z]{3}|\d{1,2}\s+[A-Z]{3})/gi;
     
-    // Find all month/year sections
     const monthSections: Array<{ month: string; year: string; index: number }> = [];
     let match;
     
@@ -150,7 +136,6 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
       });
     }
     
-    // For each month section, find events
     monthSections.forEach((monthSection, monthIndex) => {
       const startIndex = monthSection.index;
       const endIndex = monthIndex < monthSections.length - 1 
@@ -159,7 +144,6 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
       
       const sectionHtml = cleanHtml.substring(startIndex, endIndex);
       
-      // Find date ranges in this section
       const dateMatches: Array<{ dateRange: string; index: number }> = [];
       let dateMatch;
       const localDatePattern = new RegExp(dateRangePattern.source, 'gi');
@@ -171,14 +155,12 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
         });
       }
       
-      // For each date range, find the event title and location
       dateMatches.forEach((dateMatch) => {
         const afterDate = sectionHtml.substring(
           dateMatch.index + dateMatch.dateRange.length,
           dateMatch.index + dateMatch.dateRange.length + 500
         );
         
-        // Look for event title (usually after #### or in h4/h3 tags)
         const titlePatterns = [
           /####\s*([^<]+?)(?:<|EVENT DETAIL|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)/i,
           /<h[34][^>]*>([^<]+?)<\/h[34]>/i,
@@ -197,14 +179,11 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
           }
         }
         
-        // Look for location (usually after day of week)
         const locationPattern = /(?:Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)[,\s]+([^<]{10,80}?)(?:,|$|\.|<|EVENT)/i;
         const locationMatch = afterDate.match(locationPattern);
         const location = locationMatch ? locationMatch[1].trim() : '';
         
-        // Only add if we have valid data
         if (title && title.length > 10 && location && location.length > 5) {
-          // Skip if it's just "EVENT DETAIL" or similar
           if (!title.toUpperCase().includes('EVENT DETAIL') && 
               !title.toUpperCase().includes('DETAIL') &&
               title.length > 15) {
@@ -221,7 +200,6 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
       });
     });
     
-    // Sort events chronologically
     events.sort((a, b) => {
       const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                           'July', 'August', 'September', 'October', 'November', 'December'];
@@ -237,10 +215,6 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
   }
 }
 
-/**
- * Fetch ABT Calendar events using direct HTTP fetch with enhanced headers
- * Attempts to bypass Cloudflare protection
- */
 export async function fetchABTEventsDirect(): Promise<ABTEvent[]> {
   if (isFetching) {
     return [];
@@ -277,41 +251,27 @@ export async function fetchABTEventsDirect(): Promise<ABTEvent[]> {
       return events;
     }
     
-    // If parsing fails, return seed data
     return SEED_EVENTS;
   } catch (error) {
     console.error('Direct fetch failed:', error);
-    // Return seed data as fallback
     return SEED_EVENTS;
   } finally {
     isFetching = false;
   }
 }
 
-/**
- * Store events in memory (cleared on app close)
- */
 export function setInMemoryEvents(events: ABTEvent[]): void {
   inMemoryEvents = events;
 }
 
-/**
- * Get events from memory cache
- */
 export function getInMemoryEvents(): ABTEvent[] | null {
   return inMemoryEvents;
 }
 
-/**
- * Clear memory cache (called on app close)
- */
 export function clearInMemoryCache(): void {
   inMemoryEvents = null;
 }
 
-/**
- * Clear AsyncStorage cache (called on app close)
- */
 export async function clearABTCache(): Promise<void> {
   try {
     await AsyncStorage.removeItem(CACHE_KEY);
@@ -322,33 +282,24 @@ export async function clearABTCache(): Promise<void> {
   }
 }
 
-/**
- * Get cached events from AsyncStorage (for initial load)
- */
 export async function getCachedEvents(): Promise<ABTEvent[] | null> {
   try {
     const cached = await AsyncStorage.getItem(CACHE_KEY);
     if (cached) {
       const events = JSON.parse(cached);
-      // Also set in memory
       setInMemoryEvents(events);
       return events;
     }
-    // If no cache, return seed data
     setInMemoryEvents(SEED_EVENTS);
     await cacheEvents(SEED_EVENTS);
     return SEED_EVENTS;
   } catch (error) {
     console.error('Error getting cached events:', error);
-    // Return seed data as fallback
     setInMemoryEvents(SEED_EVENTS);
     return SEED_EVENTS;
   }
 }
 
-/**
- * Cache events in AsyncStorage (temporary, cleared on app close)
- */
 export async function cacheEvents(events: ABTEvent[]): Promise<void> {
   try {
     await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(events));
@@ -358,11 +309,7 @@ export async function cacheEvents(events: ABTEvent[]): Promise<void> {
   }
 }
 
-/**
- * Get ABT events - tries multiple methods
- */
 export async function getABTEvents(forceRefresh: boolean = false): Promise<ABTEvent[]> {
-  // If not forcing refresh, try cache first
   if (!forceRefresh) {
     const memoryEvents = getInMemoryEvents();
     if (memoryEvents && memoryEvents.length > 0) {
@@ -375,13 +322,11 @@ export async function getABTEvents(forceRefresh: boolean = false): Promise<ABTEv
     }
   }
   
-  // Try direct fetch
   try {
     const events = await fetchABTEventsDirect();
     return events;
   } catch (error) {
     console.error('Failed to fetch events:', error);
-    // Return seed data as final fallback
     return SEED_EVENTS;
   }
 }

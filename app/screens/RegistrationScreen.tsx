@@ -58,7 +58,6 @@ export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigati
       return;
     }
     setSubmitting(true);
-    // Simulate API call
     setTimeout(() => {
       setSubmitting(false);
       navigation.replace('MembershipPlans');

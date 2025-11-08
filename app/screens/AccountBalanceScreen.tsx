@@ -16,7 +16,6 @@ export const AccountBalanceScreen: React.FC = () => {
   const [method, setMethod] = React.useState<'paypal' | 'credit' | 'card'>('paypal');
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
-      {/* Header (logo + hamburger + search) */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
           <Text style={styles.menuIcon}>☰</Text>
@@ -36,13 +35,11 @@ export const AccountBalanceScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Title bar */}
       <View style={styles.titleBar}>
         <Text style={styles.titleText}>Account Balance</Text>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Balance rows */}
         <View style={styles.row}> 
           <Text style={styles.label}>Cash:</Text>
           <Text style={styles.value}></Text>
@@ -52,14 +49,12 @@ export const AccountBalanceScreen: React.FC = () => {
           <Text style={styles.value}></Text>
         </View>
 
-        {/* Add Funds button */}
         <View style={styles.addFundsContainer}>
           <TouchableOpacity style={styles.addFundsButton} onPress={() => setShowAddFunds(true)}>
             <Text style={styles.addFundsText}>Add Funds</Text>
           </TouchableOpacity>
         </View>
 
-        {/* History */}
         <Text style={styles.historyTitle}>Transaction History</Text>
 
         <View style={styles.tableHeader}> 
@@ -87,6 +82,16 @@ export const AccountBalanceScreen: React.FC = () => {
               }}
             >
               <Text style={styles.menuItemText}>View Events</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('Dashboard' as any, { screen: 'CurrentEntries' } as any);
+              }}
+            >
+              <Text style={styles.menuItemText}>Current Entries</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
             <TouchableOpacity
@@ -122,7 +127,6 @@ export const AccountBalanceScreen: React.FC = () => {
         </>
       )}
 
-      {/* Add Funds Modal */}
       <Modal visible={showAddFunds} animationType="fade" transparent>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>

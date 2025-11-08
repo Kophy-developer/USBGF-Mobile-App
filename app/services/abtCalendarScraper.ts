@@ -1,40 +1,28 @@
 import { WebView } from 'react-native-webview';
 import { parseABTEventsFromHTML, cacheABTHTML, ABTEvent } from './abtCalendarService';
 
-/**
- * Scraper service that uses WebView to fetch ABT Calendar data
- * This handles Cloudflare protection by running JavaScript in WebView
- */
-
 let scraperWebView: WebView | null = null;
 let scraperPromise: Promise<ABTEvent[]> | null = null;
 let scraperResolve: ((events: ABTEvent[]) => void) | null = null;
 let scraperReject: ((error: Error) => void) | null = null;
 
-/**
- * JavaScript to inject into WebView for extracting HTML
- */
 const SCRAPER_SCRIPT = `
   (function() {
     function extractContent() {
-      // Check if we're past the Cloudflare challenge
       const challengeText = document.getElementById('text');
       if (challengeText && challengeText.textContent.includes('Please wait')) {
         setTimeout(extractContent, 2000);
         return;
       }
       
-      // Check if page has actual content
       const bodyText = document.body.innerText || '';
       if (bodyText.length < 500) {
         setTimeout(extractContent, 2000);
         return;
       }
       
-      // Extract the HTML content
       const html = document.documentElement.outerHTML;
       
-      // Send HTML back to React Native
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({
           type: 'htmlContent',
@@ -43,7 +31,6 @@ const SCRAPER_SCRIPT = `
       }
     }
     
-    // Wait for page to be ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', function() {
         setTimeout(extractContent, 3000);
@@ -59,9 +46,6 @@ const SCRAPER_SCRIPT = `
   true;
 `;
 
-/**
- * Create a WebView scraper component (hidden)
- */
 export const createScraperWebView = (
   onMessage: (event: any) => void,
   onError: (error: any) => void
@@ -80,12 +64,7 @@ export const createScraperWebView = (
   );
 };
 
-/**
- * Scrape ABT Calendar data using WebView
- * Returns a promise that resolves with events
- */
 export async function scrapeABTCalendar(): Promise<ABTEvent[]> {
-  // If already scraping, return existing promise
   if (scraperPromise) {
     return scraperPromise;
   }
@@ -94,8 +73,6 @@ export async function scrapeABTCalendar(): Promise<ABTEvent[]> {
     scraperResolve = resolve;
     scraperReject = reject;
 
-    // This will be handled by the WebView component
-    // The promise will be resolved when HTML is received
     setTimeout(() => {
       if (scraperReject) {
         scraperReject(new Error('Scraping timeout - no data received'));
@@ -103,20 +80,16 @@ export async function scrapeABTCalendar(): Promise<ABTEvent[]> {
         scraperResolve = null;
         scraperReject = null;
       }
-    }, 30000); // 30 second timeout
+    }, 30000);
   });
 
   return scraperPromise;
 }
 
-/**
- * Handle message from WebView scraper
- */
 export function handleScraperMessage(event: any) {
   try {
     const data = JSON.parse(event.nativeEvent.data);
     if (data.type === 'htmlContent' && data.html) {
-      // Parse and cache the HTML
       cacheABTHTML(data.html, true).then(() => {
         const events = parseABTEventsFromHTML(data.html);
         if (scraperResolve) {
@@ -138,9 +111,6 @@ export function handleScraperMessage(event: any) {
   }
 }
 
-/**
- * Handle error from WebView scraper
- */
 export function handleScraperError(error: any) {
   console.error('Scraper WebView error:', error);
   if (scraperReject) {

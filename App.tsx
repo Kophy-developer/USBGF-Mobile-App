@@ -9,20 +9,17 @@ export default function App() {
 
   useEffect(() => {
     async function loadFonts() {
-      // Set a maximum wait time - always proceed after 2 seconds
       const timeoutId = setTimeout(() => {
         console.warn('Font loading timeout - proceeding with app load');
         setFontsLoaded(true);
-      }, 2000); // 2 second timeout - faster app load
+      }, 2000);
 
       try {
-        // Load fonts in parallel with timeout
         const fontLoadPromise = Font.loadAsync({
           'DunbarTall-Regular': require('./app/assets/fonts/dunbar-tall-regular.ttf'),
           'CaslonPro3-Regular': require('./app/assets/fonts/ACaslonPro-Regular.otf'),
         });
         
-        // Race between font loading and timeout
         await Promise.race([
           fontLoadPromise,
           new Promise(resolve => setTimeout(resolve, 2000))
@@ -33,18 +30,15 @@ export default function App() {
       } catch (error) {
         console.warn('Error loading fonts:', error);
         clearTimeout(timeoutId);
-        // Continue even if fonts fail to load - will use system fallback
         setFontsLoaded(true);
       }
     }
     loadFonts();
   }, []);
 
-  // Clear cache when app goes to background (simulating app close)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
-        // Clear cache when app goes to background
         clearABTCache();
       }
     });

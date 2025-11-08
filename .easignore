@@ -1,3 +1,26 @@
+# Ignore local caches and OS files
+.DS_Store
+Thumbs.db
+*.log
+expo.log
+
+# Ignore temporary build artifacts
+web-dist/
+
+# Ignore platform native projects (Managed workflow regenerates these)
 android/
 ios/
+
+# Ignore local Library directory
+Library/
+
+# Ignore keystore backups and secrets stored outside EAS secret storage
+release.keystore.b64
+keystore.jks
+
+# Ignore node_modules caches (actual dependencies installed during build)
+node_modules/.cache/
+
+# Default ignored directories
+.git
 

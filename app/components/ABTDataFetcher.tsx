@@ -3,14 +3,9 @@ import { View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { parseABTEventsFromHTML, setInMemoryEvents, cacheEvents } from '../services/abtCalendarService';
 
-/**
- * Hidden WebView component that fetches ABT Calendar data on app launch
- * This component should be mounted in the main app or navigation component
- */
 export const ABTDataFetcher: React.FC = () => {
   const webViewRef = useRef<WebView>(null);
 
-  // JavaScript to inject for scraping HTML
   const scraperScript = `
     (function() {
       function extractContent() {

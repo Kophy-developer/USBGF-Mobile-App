@@ -41,7 +41,6 @@ const onboardingData = [
   },
 ];
 
-// Separate component for each slide to avoid hook issues
 const OnboardingSlide: React.FC<{ item: typeof onboardingData[0] }> = ({ item }) => {
   return (
     <View style={styles.slideContainer}>
@@ -84,7 +83,6 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
   const handleScroll = (event: any) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(contentOffsetX / screenWidth);
-    // Ensure index is within bounds
     const clampedIndex = Math.max(0, Math.min(index, onboardingData.length - 1));
     setCurrentIndex(clampedIndex);
   };
@@ -97,7 +95,6 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Carousel */}
       <View style={styles.carouselContainer}>
         <FlatList
           ref={flatListRef}
@@ -123,15 +120,12 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
         />
       </View>
 
-      {/* Dots Indicator */}
       <View style={styles.dotsContainer}>
         <Dots count={3} activeIndex={currentIndex} />
       </View>
 
-      {/* Button Container with Skip and Next buttons */}
       <View style={styles.buttonContainer}>
         <View style={styles.buttonsRow}>
-          {/* Skip Button */}
           <Button
             title="Skip"
             onPress={handleSkip}
@@ -140,7 +134,6 @@ export const OnboardingCarousel: React.FC<OnboardingCarouselProps> = ({
             textStyle={{ color: theme.colors.textPrimary }}
           />
           
-          {/* Next Button */}
           <Button
             title={buttonTitle}
             onPress={handleContinue}

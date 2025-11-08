@@ -16,9 +16,9 @@ import { RootStackParamList } from '../navigation';
 
 interface Notification {
   id: string;
-  title: string; // e.g. + ABT Denver or sender name
-  content: string; // message preview
-  contactName?: string; // when available for Contact screen
+  title: string;
+  content: string;
+  contactName?: string;
 }
 
 const notifications: Notification[] = [
@@ -37,7 +37,6 @@ export const MessagesScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
           <Text style={styles.menuIcon}>☰</Text>
@@ -57,12 +56,10 @@ export const MessagesScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Title bar */}
       <View style={styles.titleBar}>
         <Text style={styles.titleText}>Messages</Text>
       </View>
 
-      {/* Messages List */}
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {notifications.map((n) => {
           const clickable = Boolean(n.contactName);
@@ -95,13 +92,55 @@ export const MessagesScreen: React.FC = () => {
         <>
           <Pressable style={styles.backdrop} onPress={() => setIsMenuOpen(false)} />
           <View style={styles.menuDropdown}>
-            <TouchableOpacity style={styles.menuItem}><Text style={styles.menuItemText}>View Events</Text></TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('Dashboard' as any, { screen: 'Events' } as any);
+              }}
+            >
+              <Text style={styles.menuItemText}>View Events</Text>
+            </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem}><Text style={styles.menuItemText}>Account Balance</Text></TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('Dashboard' as any, { screen: 'CurrentEntries' } as any);
+              }}
+            >
+              <Text style={styles.menuItemText}>Current Entries</Text>
+            </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem}><Text style={styles.menuItemText}>Membership Plan</Text></TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any);
+              }}
+            >
+              <Text style={styles.menuItemText}>Account Balance</Text>
+            </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem}><Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text></TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('Dashboard' as any, { screen: 'MembershipPlans' } as any);
+              }}
+            >
+              <Text style={styles.menuItemText}>Membership Plan</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] });
+              }}
+            >
+              <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
+            </TouchableOpacity>
           </View>
         </>
       )}

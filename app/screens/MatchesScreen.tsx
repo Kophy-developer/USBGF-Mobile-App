@@ -13,7 +13,6 @@ export const MatchesScreen: React.FC = () => {
   const [selectorOpen, setSelectorOpen] = React.useState(true);
   const [viewType, setViewType] = React.useState<EventType | null>(null);
 
-  // Reset selection every time the screen is focused
   useFocusEffect(
     React.useCallback(() => {
       setViewType(null);
@@ -63,7 +62,6 @@ export const MatchesScreen: React.FC = () => {
             <Row left="Ed Corey" right="ABT Advanced" />
 
             <SectionHeader title="Awaiting Draw" />
-            {/* Opponents on top, event name below */}
             <View style={styles.row}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={styles.rowLeft}>Ted Chee vs Neil Kaza.</Text>

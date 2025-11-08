@@ -7,7 +7,6 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ABTDataFetcher } from '../components/ABTDataFetcher';
 
-// Import screens
 import { SplashScreen } from '../screens/SplashScreen';
 import { OnboardingCarousel } from '../screens/OnboardingCarousel';
 import { SignInScreen } from '../screens/SignInScreen';
@@ -15,7 +14,6 @@ import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { LegalWebview } from '../screens/LegalWebview';
 import { HomePlaceholderScreen } from '../screens/HomePlaceholderScreen';
 
-// Import new main app screens
 import { MainDashboardScreen } from '../screens/MainDashboardScreen';
 import { MessagesScreen } from '../screens/MessagesScreen';
 import { EventsScreen } from '../screens/EventsScreen';
@@ -28,16 +26,15 @@ import { PaymentScreen } from '../screens/PaymentScreen';
 import { ContactScreen } from '../screens/ContactScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { BracketsScreen } from '../screens/BracketsScreen';
-import { ABTCalendarScreen } from '../screens/ABTCalendarScreen';
+import {   ABTCalendarScreen } from '../screens/ABTCalendarScreen';
+import { CurrentEntriesScreen } from '../screens/CurrentEntriesScreen';
 
-// Auth Stack Param List
 export type AuthStackParamList = {
   SignIn: undefined;
   PrivacyPolicy: undefined;
   LegalWebview: { type: 'bylaws' };
 };
 
-// Main App Tab Param List
 export type MainTabParamList = {
   Dashboard: undefined;
   Matches: undefined;
@@ -45,7 +42,6 @@ export type MainTabParamList = {
   Messages: undefined;
 };
 
-// Root Stack Param List
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
@@ -59,6 +55,7 @@ export type RootStackParamList = {
   Payment: { planKey: string; billing: 'annual' | 'monthly' };
   Contact: { name: string; message: string };
   ABTCalendar: undefined;
+  CurrentEntries?: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -66,7 +63,6 @@ const AuthStack = createStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const HomeStack = createStackNavigator();
 
-// Helper component for back button
 const BackButton: React.FC<{ onPress: () => void }> = ({ onPress }) => (
   <TouchableOpacity
     onPress={onPress}
@@ -80,7 +76,6 @@ const BackButton: React.FC<{ onPress: () => void }> = ({ onPress }) => (
   </TouchableOpacity>
 );
 
-// Auth Stack Navigator
 const AuthStackNavigator: React.FC = () => {
   return (
     <AuthStack.Navigator
@@ -114,7 +109,6 @@ const AuthStackNavigator: React.FC = () => {
   );
 };
 
-// Home stack keeps bottom tabs visible across pages like Events, Registration, etc.
 const HomeStackNavigator: React.FC = () => {
   return (
     <HomeStack.Navigator 
@@ -150,10 +144,15 @@ const HomeStackNavigator: React.FC = () => {
       <HomeStack.Screen 
         name="Payment" 
         component={PaymentScreen}
-        options={{ headerLeft: () => null }} // Hide back button on payment page
+        options={{ headerLeft: () => null }}
       />
       <HomeStack.Screen name="Stats" component={StatsScreen} />
       <HomeStack.Screen name="Brackets" component={BracketsScreen} />
+      <HomeStack.Screen
+        name="CurrentEntries"
+        component={CurrentEntriesScreen}
+        options={{ title: 'Current Entries' }}
+      />
       <HomeStack.Screen 
         name="ABTCalendar" 
         component={ABTCalendarScreen}
@@ -163,7 +162,6 @@ const HomeStackNavigator: React.FC = () => {
   );
 };
 
-// Main Tab Navigator
 const MainTabNavigator: React.FC = () => {
   return (
     <>
@@ -191,7 +189,7 @@ const MainTabNavigator: React.FC = () => {
           position: 'absolute',
           left: 16,
           right: 16,
-          bottom: 16, // adds clear space from the bottom edge
+          bottom: 16,
           backgroundColor: '#FFFFFF',
           borderTopWidth: 0,
           height: 64,
@@ -211,8 +209,8 @@ const MainTabNavigator: React.FC = () => {
           fontSize: 12,
           fontWeight: '500',
           color: '#111111',
-          marginTop: -2, // bring label slightly closer to icon
-          fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for body text
+          marginTop: -2,
+          fontFamily: 'CaslonPro3-Regular',
         },
         tabBarActiveTintColor: '#1B365D',
         tabBarInactiveTintColor: '#5A5A5A',
@@ -223,11 +221,11 @@ const MainTabNavigator: React.FC = () => {
         component={HomeStackNavigator}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color, marginBottom: -2 }}>🌐</Text>
-          ),
-          headerShown: false, // HomeStack handles its own header
-        }}
+            tabBarIcon: ({ color }) => (
+              <Text style={{ fontSize: 22, color, marginBottom: -2 }}>🌐</Text>
+            ),
+            headerShown: false,
+          }}
       />
       <Tab.Screen 
         name="Matches" 
@@ -327,7 +325,6 @@ export const Navigation: React.FC = () => {
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />
           <Stack.Screen name="Registration" component={RegistrationScreen} />
-          {/* Keep HomePlaceholder for now as fallback */}
           <Stack.Screen name="HomePlaceholder" component={HomePlaceholderScreen} />
         </Stack.Navigator>
       </NavigationContainer>

@@ -1,30 +1,18 @@
-// Theme tokens derived from USBGF logo colors
 export const colors = {
-  // Primary colors from logo (dark blue)
   primary: '#1B365D',
   primaryDark: '#0F0F1A',
-  
-  // Background colors
   bg: '#1A1A2E',
   surface: '#FFFFFF',
-  
-  // Text colors
   textPrimary: '#111111',
   textSecondary: '#5A5A5A',
   textOnDark: '#FFFFFF',
-  
-  // Accent colors
-  accent: '#DC2626', // Red from logo
+  accent: '#DC2626',
   success: '#1A9E55',
   error: '#DC2626',
-  
-  // Neutral colors
   border: '#E5E5E5',
   placeholder: '#9CA3AF',
   disabled: '#D1D5DB',
-  grey: '#3D3935', // Grey for secondary buttons
-  
-  // OAuth brand colors
+  grey: '#3D3935',
   apple: '#000000',
   google: '#4285F4',
 } as const;
@@ -54,31 +42,31 @@ export const typography = {
     fontSize: 28,
     fontWeight: '600' as const,
     lineHeight: 36,
-    fontFamily: 'DunbarTall-Regular', // Dunbar Tall for headers - falls back to system font if not loaded
+    fontFamily: 'DunbarTall-Regular',
   },
   heading: {
     fontSize: 20,
     fontWeight: '600' as const,
     lineHeight: 28,
-    fontFamily: 'DunbarTall-Regular', // Dunbar Tall for headers - falls back to system font if not loaded
+    fontFamily: 'DunbarTall-Regular',
   },
   body: {
     fontSize: 16,
     fontWeight: '400' as const,
     lineHeight: 24,
-    fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for body text - falls back to system font if not loaded
+    fontFamily: 'CaslonPro3-Regular',
   },
   caption: {
     fontSize: 13,
     fontWeight: '400' as const,
     lineHeight: 18,
-    fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for body text - falls back to system font if not loaded
+    fontFamily: 'CaslonPro3-Regular',
   },
   button: {
     fontSize: 16,
     fontWeight: '600' as const,
     lineHeight: 24,
-    fontFamily: 'CaslonPro3-Regular', // Caslon Pro 3 for buttons - falls back to system font if not loaded
+    fontFamily: 'CaslonPro3-Regular',
   },
 } as const;
 

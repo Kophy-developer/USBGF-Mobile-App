@@ -38,7 +38,6 @@ export const MembershipProfileScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
-      {/* Header (logo + hamburger + search) */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
           <Text style={styles.menuIcon}>☰</Text>
@@ -58,13 +57,11 @@ export const MembershipProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Title bar */}
       <View style={styles.titleBar}>
         <Text style={styles.titleText}>Profile</Text>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Avatar + Buttons */}
         <View style={styles.topRow}>
           <View style={styles.avatarWrapper}>
             <View style={styles.avatarCircle}>
@@ -88,7 +85,6 @@ export const MembershipProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Details list / edit form */}
         {!isEditing && (
           <View style={styles.card}>
             <View style={styles.displayRow}><Text style={styles.displayLabel}>Name</Text><Text style={styles.displayValue}>{name || '—'}</Text></View>
@@ -126,7 +122,6 @@ export const MembershipProfileScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Membership summary */}
         {!isEditing && (
           <View style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }]}> 
             <Text style={styles.displayLabel}>Membership</Text>
@@ -150,6 +145,10 @@ export const MembershipProfileScreen: React.FC = () => {
           <View style={styles.menuDropdown}>
             <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Events'); }}>
               <Text style={styles.menuItemText}>View Events</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Dashboard' as any, { screen: 'CurrentEntries' } as any); }}>
+              <Text style={styles.menuItemText}>Current Entries</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
             <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any); }}>

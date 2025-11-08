@@ -29,7 +29,6 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load events
   const loadEvents = useCallback(async (forceRefresh: boolean = false) => {
     try {
       if (!forceRefresh) {
@@ -37,7 +36,6 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
       }
       setError(null);
 
-      // Use the service function which handles all fetching methods
       const fetchedEvents = await getABTEvents(forceRefresh);
       
       if (fetchedEvents && fetchedEvents.length > 0) {
@@ -57,7 +55,6 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
     }
   }, []);
 
-  // Load events when screen is focused
   useFocusEffect(
     useCallback(() => {
       loadEvents(false);
@@ -68,16 +65,13 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
-    // Trigger refresh via service (will use direct fetch or background fetcher)
     await loadEvents(true);
   }, [loadEvents]);
 
-  // Format month name for display
   const formatMonthYear = (month: string, year: string): string => {
     return `${month} ${year}`;
   };
 
-  // Group events by month/year
   const groupedEvents = events.reduce((acc, event) => {
     const key = `${event.month} ${event.year}`;
     if (!acc[key]) {
@@ -90,9 +84,7 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1B365D" translucent />
-      
 
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity 
@@ -106,7 +98,6 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
         </View>
       </View>
 
-      {/* Content */}
       {loading && events.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -148,7 +139,7 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
                     <TouchableOpacity
                       key={event.id}
                       style={styles.eventCard}
-                      onPress={() => {/* Handle event press */}}
+                      onPress={() => {}}
                     >
                       <View style={styles.eventHeader}>
                         <View style={styles.dateBadge}>

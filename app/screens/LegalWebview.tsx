@@ -20,7 +20,6 @@ export const LegalWebview: React.FC<LegalWebviewProps> = ({ navigation, route })
   const { type } = route.params;
 
   const handleOpenPDF = async () => {
-    // Official USBGF ByLaws PDF from their website
     const pdfUrl = 'https://usbgf.org/wp-content/uploads/2021/05/USBGF-ByLaws-C-2017-03-07.pdf';
     
     try {

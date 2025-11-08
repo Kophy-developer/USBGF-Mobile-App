@@ -25,7 +25,6 @@ export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ naviga
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.headerContainer}>
           <Image
             source={require('../assets/USBGF_com_logo.png')}
@@ -37,7 +36,6 @@ export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ naviga
           <Text style={styles.updatedDate}>Updated October 2023</Text>
         </View>
 
-        {/* Content */}
         <View style={styles.contentContainer}>
           <Text style={styles.sectionTitle}>Protecting Your Privacy</Text>
           <Text style={styles.paragraph}>

@@ -50,7 +50,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
     setIsLoading(true);
     
-    // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
       navigation.replace('MainApp');
@@ -84,7 +83,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
         <View style={styles.logoContainer}>
           <Image
             source={require('../assets/USBGF_com_logo.png')}
@@ -94,13 +92,11 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        {/* Header */}
         <View style={styles.headerContainer}>
           <Text style={styles.title}>Welcome</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
 
-        {/* Form */}
         <View style={styles.formContainer}>
           <TextField
             label="Email or username"
@@ -130,14 +126,12 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
             disabled={!isFormValid}
           />
           
-          {/* Register link button */}
           <TouchableOpacity style={styles.registerLinkButton} onPress={handleRegister}>
             <Text style={styles.registerLinkText}>Don’t have an account? Register</Text>
           </TouchableOpacity>
         </View>
 
 
-        {/* Footer Links */}
         <View style={styles.footerContainer}>
           <TouchableOpacity onPress={handleForgotPassword}>
             <Text style={styles.linkText}>Forgot password</Text>

@@ -14,7 +14,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
 
-// Navigation types
 type MainDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainApp'>;
 
 interface MainDashboardScreenProps {
@@ -64,7 +63,6 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
 
   return (
 		<SafeAreaView style={styles.container} edges={['top', 'left','right']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
           <Text style={styles.menuIcon}>☰</Text>
@@ -79,21 +77,17 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
           />
         </View>
         
-        {/* Invisible spacer to balance the hamburger menu and center the logo */}
         <View style={styles.spacer} />
       </View>
 
-      {/* Main Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Feature Grid */}
         <View style={styles.featureGrid}>
-          {/* Row 1 */}
           <View style={styles.buttonRow}>
             <TouchableOpacity 
               style={[styles.featureButton, styles.greyButton]} 
               onPress={handleMatches}
             >
-              <Text style={styles.buttonIcon}>🎲</Text>
+              <Image source={require('../assets/icons/Matches.png')} style={styles.buttonImage} resizeMode="contain" />
               <Text style={styles.buttonText}>Matches</Text>
             </TouchableOpacity>
             
@@ -101,18 +95,17 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
               style={[styles.featureButton, styles.blueButton]} 
               onPress={handleEvents}
             >
-              <Text style={styles.buttonIcon}>📅</Text>
+              <Image source={require('../assets/icons/Event.png')} style={styles.buttonImage} resizeMode="contain" />
               <Text style={styles.buttonText}>Events</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Row 2 */}
           <View style={styles.buttonRow}>
             <TouchableOpacity 
               style={[styles.featureButton, styles.greyButton]} 
               onPress={handleProfile}
             >
-              <Text style={styles.buttonIcon}>👤</Text>
+              <Image source={require('../assets/icons/Profile.png')} style={styles.buttonImage} resizeMode="contain" />
               <Text style={styles.buttonText}>Profile</Text>
             </TouchableOpacity>
             
@@ -120,18 +113,17 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
               style={[styles.featureButton, styles.blueButton]} 
               onPress={handleStats}
             >
-              <Text style={styles.buttonIcon}>📊</Text>
+              <Image source={require('../assets/icons/Stats.png')} style={styles.buttonImage} resizeMode="contain" />
               <Text style={styles.buttonText}>Stats</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Row 3 */}
           <View style={styles.buttonRow}>
             <TouchableOpacity 
               style={[styles.featureButton, styles.greyButton]} 
               onPress={handleBrackets}
             >
-              <Text style={styles.buttonIcon}>🏆</Text>
+              <Image source={require('../assets/icons/Brackets.png')} style={styles.buttonImage} resizeMode="contain" />
               <Text style={styles.buttonText}>Brackets</Text>
             </TouchableOpacity>
             
@@ -139,18 +131,16 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
               style={[styles.featureButton, styles.blueButton]} 
               onPress={handleMessage}
             >
-              <Text style={styles.buttonIcon}>💬</Text>
+              <Image source={require('../assets/icons/Message.png')} style={styles.buttonImage} resizeMode="contain" />
               <Text style={styles.buttonText}>Message</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-				{/* Quick Actions removed as requested */}
 			</ScrollView>
 
       {isMenuOpen && (
         <>
-          {/* Overlay to capture outside taps */}
           <Pressable style={styles.backdrop} onPress={() => setIsMenuOpen(false)} accessibilityLabel="Close menu" />
           <View style={styles.menuDropdown}>
             <TouchableOpacity
@@ -162,6 +152,17 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
               accessibilityRole="button"
             >
               <Text style={styles.menuItemText}>View Events</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setIsMenuOpen(false);
+                navigation.navigate('Dashboard' as any, { screen: 'CurrentEntries' } as any);
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.menuItemText}>Current Entries</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
           <TouchableOpacity 
@@ -317,15 +318,18 @@ const styles = StyleSheet.create({
   blueButton: {
     backgroundColor: theme.colors.primary,
   },
-  buttonIcon: {
-		fontSize: 44,
-    color: theme.colors.surface,
+  buttonImage: {
+    width: 48,
+    height: 48,
     marginBottom: theme.spacing.sm,
   },
   buttonText: {
-    ...theme.typography.button,
     fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '600',
     color: theme.colors.surface,
+    fontFamily: 'DunbarTall-Regular',
+    textAlign: 'center',
   },
   quickActions: {
     marginTop: theme.spacing['3xl'],

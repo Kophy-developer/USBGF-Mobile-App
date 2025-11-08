@@ -18,7 +18,6 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
   const [cvv, setCvv] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Allow any length and format for demo verification; only require non-empty values
   const isValid = nameOnCard.trim() && cardNumber.length >= 0 && expiry.length >= 0 && cvv.length >= 0;
 
   const handlePay = async () => {
@@ -26,7 +25,6 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      // Simulate successful payment then auto-login → Main dashboard
       navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
     }, 1200);
   };

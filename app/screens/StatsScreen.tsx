@@ -17,7 +17,6 @@ export const StatsScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={['top','left','right']}>
       <View style={styles.titleBar}><Text style={styles.titleText}>Statistics - All Time</Text></View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* All Time grid */}
         <View style={styles.grid}>
           <StatCard label="Current Rating" value="1590.4" />
           <StatCard label="Highest Rating" value="1622.2" />
@@ -33,7 +32,6 @@ export const StatsScreen: React.FC = () => {
           <StatCard label="Rank Points" value="4.96" />
         </View>
 
-        {/* Yearly section */}
         <Text style={styles.sectionHeading}>Yearly Statistics</Text>
 
         <Text style={styles.yearHeading}>2025</Text>

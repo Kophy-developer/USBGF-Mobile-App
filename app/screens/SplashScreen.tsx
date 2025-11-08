@@ -14,13 +14,11 @@ interface SplashScreenProps {
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
   useEffect(() => {
-    // Navigate after 2 seconds
     const timer = setTimeout(async () => {
       try {
         const onboardingSeen = await getOnboardingSeen();
         navigation.replace(onboardingSeen ? 'AuthStack' : 'Onboarding');
       } catch (error) {
-        // Default to onboarding if there's an error
         navigation.replace('Onboarding');
       }
     }, 2000);
