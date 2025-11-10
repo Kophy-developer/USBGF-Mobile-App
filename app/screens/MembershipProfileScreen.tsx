@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
@@ -96,8 +96,9 @@ export const MembershipProfileScreen: React.FC = () => {
   const [membershipLevel, setMembershipLevel] = React.useState('Basic Monthly');
 
   const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted && permission.status !== ImagePicker.PermissionStatus.LIMITED) {
+      Alert.alert('Permission Required', 'Please allow photo library access to update your profile picture.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({

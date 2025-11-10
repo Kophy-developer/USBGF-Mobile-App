@@ -87,10 +87,6 @@ export const MembershipPlansScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>Membership</Text>
-      </View>
-
       <View style={styles.toggleRow}>
         <Text style={[styles.toggleLabel, billing === 'annual' && styles.toggleLabelActive]}>Annual Recurring</Text>
         <TouchableOpacity
@@ -143,20 +139,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface,
   },
-  headerBar: {
-    backgroundColor: '#1B365D',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing['3xl'],
-    marginHorizontal: theme.spacing['3xl'],
-    marginTop: theme.spacing.lg,
-    borderRadius: 4,
-  },
-  headerTitle: {
-    ...theme.typography.heading,
-    color: theme.colors.surface,
-    fontWeight: '700',
-    fontSize: 16,
-  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,6 +146,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     marginHorizontal: theme.spacing['3xl'],
     paddingVertical: theme.spacing.md,
+    marginTop: theme.spacing['2xl'],
   },
   toggleLabel: {
     ...theme.typography.caption,

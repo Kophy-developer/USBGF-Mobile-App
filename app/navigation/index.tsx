@@ -144,7 +144,11 @@ const HomeStackNavigator: React.FC = () => {
         component={AccountBalanceScreen}
         options={{ title: 'Account Balance' }}
       />
-      <HomeStack.Screen name="MembershipPlans" component={MembershipPlansScreen} />
+      <HomeStack.Screen
+        name="MembershipPlans"
+        component={MembershipPlansScreen}
+        options={{ title: 'Membership Plans' }}
+      />
       <HomeStack.Screen 
         name="Payment" 
         component={PaymentScreen}
