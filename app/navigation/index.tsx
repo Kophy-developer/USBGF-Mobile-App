@@ -139,7 +139,11 @@ const HomeStackNavigator: React.FC = () => {
       />
       <HomeStack.Screen name="Events" component={EventsScreen} />
       <HomeStack.Screen name="Registration" component={RegistrationScreen} />
-      <HomeStack.Screen name="AccountBalance" component={AccountBalanceScreen} />
+      <HomeStack.Screen
+        name="AccountBalance"
+        component={AccountBalanceScreen}
+        options={{ title: 'Account Balance' }}
+      />
       <HomeStack.Screen name="MembershipPlans" component={MembershipPlansScreen} />
       <HomeStack.Screen 
         name="Payment" 

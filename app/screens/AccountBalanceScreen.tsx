@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
@@ -10,35 +10,11 @@ import { Button } from '../components/Button';
 
 export const AccountBalanceScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [showAddFunds, setShowAddFunds] = React.useState(false);
   const [amount, setAmount] = React.useState('99.50');
   const [method, setMethod] = React.useState<'paypal' | 'credit' | 'card'>('paypal');
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
-          <Text style={styles.menuIcon}>☰</Text>
-        </TouchableOpacity>
-
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/USBGF_com_logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityLabel="USBGF Logo"
-          />
-        </View>
-
-        <TouchableOpacity style={styles.searchButton}>
-          <Text style={styles.searchIcon}>⌕</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.titleBar}>
-        <Text style={styles.titleText}>Account Balance</Text>
-      </View>
-
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.row}> 
           <Text style={styles.label}>Cash:</Text>
@@ -69,64 +45,6 @@ export const AccountBalanceScreen: React.FC = () => {
           <Text style={[styles.td, styles.colBalance]}>$40</Text>
         </View>
       </ScrollView>
-
-      {isMenuOpen && (
-        <>
-          <Pressable style={styles.backdrop} onPress={() => setIsMenuOpen(false)} accessibilityLabel="Close menu" />
-          <View style={styles.menuDropdown}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'Events' } as any);
-              }}
-            >
-              <Text style={styles.menuItemText}>View Events</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'CurrentEntries' } as any);
-              }}
-            >
-              <Text style={styles.menuItemText}>Current Entries</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any);
-              }}
-            >
-              <Text style={styles.menuItemText}>Account Balance</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'MembershipPlans' } as any);
-              }}
-            >
-              <Text style={styles.menuItemText}>Membership Plan</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] });
-              }}
-            >
-              <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
-
       <Modal visible={showAddFunds} animationType="fade" transparent>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -177,61 +95,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing['3xl'],
-    paddingVertical: theme.spacing.sm,
-    paddingTop: theme.spacing['2xl'],
-    backgroundColor: theme.colors.surface,
-    minHeight: 120,
-  },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    zIndex: 900,
-  },
-  menuButton: {
-    padding: theme.spacing.sm,
-  },
-  menuIcon: {
-    fontSize: 30,
-    color: theme.colors.textPrimary,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: 240,
-    height: 120,
-  },
-  searchButton: {
-    padding: theme.spacing.sm,
-  },
-  searchIcon: {
-    fontSize: 45,
-    color: theme.colors.textPrimary,
-  },
-  titleBar: {
-    backgroundColor: '#1B365D',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing['3xl'],
-    marginHorizontal: theme.spacing['3xl'],
-    marginTop: theme.spacing.lg,
-    borderRadius: 4,
-  },
-  titleText: {
-    ...theme.typography.heading,
-    color: theme.colors.surface,
-    fontSize: 22,
-    fontWeight: '700',
-  },
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: theme.spacing['3xl'],
@@ -242,18 +105,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing['3xl'],
+    gap: theme.spacing.lg,
   },
   label: {
-    ...theme.typography.title,
-    fontSize: 28,
+    ...theme.typography.heading,
+    fontSize: 22,
     color: theme.colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   value: {
-    ...theme.typography.heading,
+    ...theme.typography.body,
     marginLeft: theme.spacing['2xl'],
-    fontSize: 24,
+    fontSize: 20,
     color: theme.colors.textPrimary,
+    fontWeight: '600',
   },
   addFundsContainer: {
     alignItems: 'flex-start',
@@ -275,9 +140,9 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     ...theme.typography.heading,
-    fontSize: 20,
+    fontSize: 22,
     color: theme.colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: theme.spacing['2xl'],
   },
   tableHeader: {
@@ -290,53 +155,18 @@ const styles = StyleSheet.create({
   },
   th: {
     ...theme.typography.body,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   td: {
     ...theme.typography.body,
-    fontSize: 18,
+    fontSize: 16,
     color: theme.colors.textPrimary,
   },
   colDate: { flex: 2 },
   colDelta: { flex: 1, textAlign: 'center' as const },
   colBalance: { flex: 1, textAlign: 'right' as const },
-  menuDropdown: {
-    position: 'absolute',
-    top: 120,
-    left: theme.spacing['3xl'],
-    width: 220,
-    backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
-    overflow: 'hidden',
-    zIndex: 1000,
-  },
-  menuItem: {
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing['2xl'],
-    backgroundColor: '#FFFFFF',
-  },
-  menuItemText: {
-    ...theme.typography.body,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  logoutText: {
-    color: '#B91C1C',
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',

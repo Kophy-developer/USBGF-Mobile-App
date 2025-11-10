@@ -1,18 +1,11 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  Image,
-  Pressable,
-} from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
+import { AppHeader } from '../components/AppHeader';
+import { buildPrimaryMenuItems } from '../utils/menuItems';
 
 type MainDashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MainApp'>;
 
@@ -24,13 +17,10 @@ const { width } = Dimensions.get('window');
 const buttonWidth = (width - theme.spacing['3xl'] * 2 - theme.spacing.lg) / 2;
 
 export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ navigation }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuItems = useMemo(() => buildPrimaryMenuItems(navigation), [navigation]);
+
   const handleMatches = () => {
     navigation.navigate('Matches' as any);
-  };
-
-  const handleRegister = () => {
-    navigation.navigate('Dashboard' as any, { screen: 'Registration' } as any);
   };
 
   const handleProfile = () => {
@@ -53,32 +43,9 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
     navigation.navigate('Dashboard' as any, { screen: 'Events' } as any);
   };
 
-  const handleAccountBalance = () => {
-    navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any);
-  };
-
-  const handleMembershipPlans = () => {
-    navigation.navigate('Dashboard' as any, { screen: 'MembershipPlans' } as any);
-  };
-
   return (
 		<SafeAreaView style={styles.container} edges={['top', 'left','right']}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
-          <Text style={styles.menuIcon}>☰</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/USBGF_com_logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityLabel="USBGF Logo"
-          />
-        </View>
-        
-        <View style={styles.spacer} />
-      </View>
+      <AppHeader menuItems={menuItems} padTop={false} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.featureGrid}>
@@ -138,68 +105,6 @@ export const MainDashboardScreen: React.FC<MainDashboardScreenProps> = ({ naviga
         </View>
 
 			</ScrollView>
-
-      {isMenuOpen && (
-        <>
-          <Pressable style={styles.backdrop} onPress={() => setIsMenuOpen(false)} accessibilityLabel="Close menu" />
-          <View style={styles.menuDropdown}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'Events' } as any);
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.menuItemText}>View Events</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'CurrentEntries' } as any);
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.menuItemText}>Current Entries</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-          <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any);
-              }}
-              accessibilityRole="button"
-          >
-              <Text style={styles.menuItemText}>Account Balance</Text>
-          </TouchableOpacity>
-            <View style={styles.menuDivider} />
-          <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.navigate('Dashboard' as any, { screen: 'MembershipPlans' } as any);
-              }}
-              accessibilityRole="button"
-          >
-              <Text style={styles.menuItemText}>Membership Plan</Text>
-          </TouchableOpacity>
-            <View style={styles.menuDivider} />
-          <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] });
-              }}
-              accessibilityRole="button"
-          >
-              <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-          </TouchableOpacity>
-        </View>
-        </>
-      )}
     </SafeAreaView>
   );
 };
@@ -208,85 +113,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing['3xl'],
-    paddingVertical: theme.spacing.lg,
-    backgroundColor: theme.colors.surface, // White background as per design
-    minHeight: 80, // Reduced height
-    position: 'relative',
-  },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    zIndex: 900,
-  },
-  menuButton: {
-    padding: theme.spacing.sm,
-    width: 50, // Fixed width to balance with spacer
-    zIndex: 10, // Ensure it's above the logo container
-  },
-  menuIcon: {
-		fontSize: 30,
-    color: theme.colors.primary, // Dark blue icon for white background
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    pointerEvents: 'none', // Allow touches to pass through to buttons below
-  },
-  logo: {
-		width: 180,
-		height: 60,
-	},
-  menuDropdown: {
-    position: 'absolute',
-    top: 80, // below header
-    left: theme.spacing['3xl'],
-    width: 220,
-    backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
-    overflow: 'hidden',
-    zIndex: 1000,
-  },
-  menuItem: {
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing['2xl'],
-    backgroundColor: '#FFFFFF',
-  },
-  menuItemText: {
-    ...theme.typography.body,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  logoutText: {
-    color: '#B91C1C',
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  spacer: {
-    width: 50, // Same width as menuButton to balance
-    zIndex: 10, // Ensure it's above the logo container
   },
   content: {
     flex: 1,

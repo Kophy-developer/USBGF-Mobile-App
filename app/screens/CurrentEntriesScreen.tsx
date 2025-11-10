@@ -1,21 +1,8 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Pressable,
-  Alert,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
 import * as DocumentPicker from 'expo-document-picker';
-
-type Navigation = StackNavigationProp<RootStackParamList>;
 
 interface AwaitingResultRow {
   opponent: string;
@@ -29,7 +16,7 @@ interface AwaitingOpponentRow {
   event: string;
   round: string;
   format: string;
-  deadline: string;
+  deadline?: string;
 }
 
 interface AwaitingDrawRow {
@@ -95,8 +82,7 @@ const awaitingDraw: AwaitingDrawRow[] = [
 ];
 
 export const CurrentEntriesScreen: React.FC = () => {
-  const navigation = useNavigation<Navigation>();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [expandedResult, setExpandedResult] = useState<string | null>(null);
 
   const handleUploadReport = async (opponent: string) => {
     try {
@@ -113,120 +99,82 @@ export const CurrentEntriesScreen: React.FC = () => {
     }
   };
 
-  const navigateTo = (route: string) => {
-    setIsMenuOpen(false);
-    navigation.navigate('Dashboard' as any, { screen: route } as any);
+  const toggleResult = (id: string) => {
+    setExpandedResult((prev) => (prev === id ? null : id));
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Awaiting Match Result</Text>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerCell, styles.colOpponent]}>Opponent</Text>
-            <View style={[styles.colReport, styles.reportHeader]}>
-              <Text style={styles.headerCell}>Report</Text>
-              <TouchableOpacity onPress={() => Alert.alert('Report Result', 'Tap W or L to report your result and upload supporting documentation.')}>
-                <Text style={styles.infoIcon}>ℹ️</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={[styles.headerCell, styles.colEvent]}>Event</Text>
-            <Text style={[styles.headerCell, styles.colRound]}>Round</Text>
-          </View>
-          {awaitingResults.map((item, index) => {
+        <Text style={styles.sectionHeading}>Awaiting Match Result</Text>
+        {awaitingResults.map((item, index) => {
             const orderedReport = [...item.report].sort((a, b) => {
               if (a === b) return 0;
               return a === 'W' ? -1 : 1;
             });
+            const id = `${item.opponent}-${index}`;
+            const isOpen = expandedResult === id;
 
             return (
-              <View key={`${item.opponent}-${index}`} style={styles.tableRow}>
-                <Text style={[styles.cellText, styles.colOpponent]}>{item.opponent}</Text>
-                <View style={[styles.colReport, styles.reportContainer]}>
-                  {orderedReport.map((mark, idx) => (
-                    <TouchableOpacity
-                      key={`${mark}-${idx}`}
-                      style={[styles.reportBadge, mark === 'W' ? styles.reportWin : styles.reportLoss]}
-                      onPress={() => handleUploadReport(item.opponent)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.reportText}>{mark}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <Text style={[styles.cellText, styles.colEvent]}>{item.event}</Text>
-                <Text style={[styles.cellText, styles.colRound]}>{item.round}</Text>
+              <View key={id} style={styles.entryCard}>
+                <TouchableOpacity style={styles.entryHeader} onPress={() => toggleResult(id)}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.entryName}>{item.opponent}</Text>
+                    <Text style={styles.entryEvent}>{item.event}</Text>
+                  </View>
+                  <Text style={styles.entryChevron}>{isOpen ? '▴' : '▾'}</Text>
+                </TouchableOpacity>
+                {isOpen && (
+                  <View style={styles.entryDetails}>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Round</Text>
+                      <Text style={styles.detailValue}>{item.round}</Text>
+                    </View>
+                    <View style={[styles.detailRow, styles.detailReport]}>
+                      <Text style={styles.detailLabel}>Report</Text>
+                      <View style={styles.reportContainer}>
+                        {orderedReport.map((mark, idx) => (
+                          <TouchableOpacity
+                            key={`${mark}-${idx}`}
+                            style={[styles.reportBadge, mark === 'W' ? styles.reportWin : styles.reportLoss]}
+                            onPress={() => handleUploadReport(item.opponent)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.reportText}>{mark}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             );
           })}
-        </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Awaiting Opponent</Text>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerCell, styles.colWaitingFor]}>Waiting For</Text>
-            <Text style={[styles.headerCell, styles.colEvent]}>Event</Text>
-            <Text style={[styles.headerCell, styles.colRound]}>Round</Text>
-            <Text style={[styles.headerCell, styles.colFormat]}>Format</Text>
-          </View>
-          {awaitingOpponents.map((item, index) => (
-            <View key={`${item.event}-${index}`} style={styles.tableRow}>
-              <Text style={[styles.cellText, styles.colWaitingFor]}>{item.waitingFor}</Text>
-              <Text style={[styles.cellText, styles.colEvent]}>{item.event}</Text>
-              <Text style={[styles.cellText, styles.colRound]}>{item.round}</Text>
-              <Text style={[styles.cellText, styles.colFormat]}>{item.format}</Text>
+        <Text style={styles.sectionHeading}>Awaiting Opponent</Text>
+        {awaitingOpponents.map((item, index) => (
+          <View key={`${item.event}-${index}`} style={styles.simpleCard}>
+            <Text style={styles.entryName}>{item.waitingFor}</Text>
+            <Text style={styles.entryEvent}>{item.event}</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Round</Text>
+              <Text style={styles.detailValue}>{item.round}</Text>
             </View>
-          ))}
-        </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Format</Text>
+              <Text style={styles.detailValue}>{item.format}</Text>
+            </View>
+          </View>
+        ))}
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Awaiting Draw</Text>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerCell, styles.colEvent]}>Event</Text>
-            <Text style={[styles.headerCell, styles.colBracket]}>Bracket</Text>
+        <Text style={styles.sectionHeading}>Awaiting Draw</Text>
+        {awaitingDraw.map((item, index) => (
+          <View key={`${item.event}-${index}`} style={styles.simpleCard}>
+            <Text style={styles.entryName}>{item.event}</Text>
+            <Text style={styles.entryEvent}>{item.bracket}</Text>
           </View>
-          {awaitingDraw.map((item, index) => (
-            <View key={`${item.event}-${index}`} style={styles.tableRow}>
-              <Text style={[styles.cellText, styles.colEvent]}>{item.event}</Text>
-              <Text style={[styles.cellText, styles.colBracket]}>{item.bracket}</Text>
-            </View>
-          ))}
-        </View>
+        ))}
       </ScrollView>
-
-      {isMenuOpen && (
-        <>
-          <Pressable style={styles.backdrop} onPress={() => setIsMenuOpen(false)} accessibilityLabel="Close menu" />
-          <View style={styles.menuDropdown}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Events')}>
-              <Text style={styles.menuItemText}>View Events</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('AccountBalance')}>
-              <Text style={styles.menuItemText}>Account Balance</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('MembershipPlans')}>
-              <Text style={styles.menuItemText}>Membership Plan</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => setIsMenuOpen(false)}>
-              <Text style={[styles.menuItemText, styles.menuHighlight]}>Current Entries</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuOpen(false);
-                navigation.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] });
-              }}
-            >
-              <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
     </SafeAreaView>
   );
 };
@@ -243,9 +191,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing['3xl'],
     paddingTop: theme.spacing['2xl'],
     paddingBottom: theme.spacing['4xl'],
-    gap: theme.spacing['3xl'],
+    gap: theme.spacing['2xl'],
   },
-  sectionCard: {
+  sectionHeading: {
+    ...theme.typography.heading,
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  entryCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
     borderWidth: 1,
@@ -257,60 +211,57 @@ const styles = StyleSheet.create({
     elevation: 2,
     overflow: 'hidden',
   },
-  sectionTitle: {
-    ...theme.typography.heading,
-    fontSize: 20,
-    color: theme.colors.textPrimary,
-    fontWeight: '700',
-    paddingHorizontal: theme.spacing['2xl'],
-    paddingTop: theme.spacing['2xl'],
-    paddingBottom: theme.spacing.lg,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8ECF7',
-    paddingHorizontal: theme.spacing['2xl'],
-    paddingVertical: theme.spacing.md,
-  },
-  headerCell: {
-    ...theme.typography.caption,
-    color: '#1B365D',
-    fontWeight: '700',
-  },
-  tableRow: {
+  entryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing['2xl'],
     paddingVertical: theme.spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    gap: theme.spacing.md,
   },
-  cellText: {
+  entryName: {
     ...theme.typography.body,
+    fontWeight: '700',
+    fontSize: 16,
     color: theme.colors.textPrimary,
   },
-  cellButton: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radius.sm,
-  },
-  scheduleButton: {
-    backgroundColor: '#1B365D',
-  },
-  buttonText: {
+  entryEvent: {
     ...theme.typography.caption,
-    color: theme.colors.surface,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+  },
+  entryChevron: {
+    fontSize: 18,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.md,
+  },
+  entryDetails: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: theme.spacing['2xl'],
+    paddingVertical: theme.spacing.lg,
+    gap: theme.spacing.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
     fontWeight: '600',
+  },
+  detailValue: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+  },
+  detailReport: {
+    alignItems: 'flex-start',
   },
   reportContainer: {
     flexDirection: 'row',
-    gap: theme.spacing.xs,
-  },
-  reportHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: theme.spacing.xs,
   },
   reportBadge: {
@@ -331,95 +282,18 @@ const styles = StyleSheet.create({
     color: theme.colors.surface,
     fontWeight: '700',
   },
-  infoIcon: {
-    fontSize: 16,
-  },
-  linkText: {
-    color: '#1B365D',
-    textDecorationLine: 'underline',
-  },
-  colOpponent: {
-    flex: 1.4,
-  },
-  colSchedule: {
-    width: 110,
-    alignItems: 'center',
-  },
-  colTimeZone: {
-    width: 110,
-  },
-  colReport: {
-    width: 80,
-    justifyContent: 'center',
-  },
-  colEvent: {
-    flex: 1.5,
-    paddingRight: theme.spacing.sm,
-  },
-  colRound: {
-    width: 55,
-    textAlign: 'center',
-  },
-  colFormat: {
-    width: 90,
-    textAlign: 'center',
-  },
-  colDeadline: {
-    width: 120,
-    textAlign: 'center',
-  },
-  colWaitingFor: {
-    flex: 1.5,
-    paddingRight: theme.spacing.sm,
-  },
-  colBracket: {
-    flex: 1.5,
-  },
-  menuDropdown: {
-    position: 'absolute',
-    top: 120,
-    left: theme.spacing['3xl'],
-    width: 220,
-    backgroundColor: '#FFFFFF',
+  simpleCard: {
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
-    overflow: 'hidden',
-    zIndex: 1000,
-  },
-  menuItem: {
-    paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing['2xl'],
-    backgroundColor: '#FFFFFF',
-  },
-  menuItemText: {
-    ...theme.typography.body,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  menuHighlight: {
-    color: '#1B365D',
-    fontWeight: '700',
-  },
-  logoutText: {
-    color: '#B91C1C',
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    zIndex: 900,
+    paddingVertical: theme.spacing['2xl'],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    gap: theme.spacing.sm,
   },
 });

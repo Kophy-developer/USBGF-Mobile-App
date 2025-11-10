@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 
@@ -51,6 +51,21 @@ const SAMPLE: Round[] = [
   },
 ];
 
+const BRACKET_EVENTS = [
+  {
+    id: 'viking-classic',
+    name: 'Viking Classic',
+    location: 'Minnesota',
+    rounds: SAMPLE,
+  },
+  {
+    id: 'boston-open',
+    name: 'Boston Open',
+    location: 'Massachusetts',
+    rounds: SAMPLE,
+  },
+];
+
 const RoundHeader: React.FC<{ title: string; points: string; by: string }> = ({ title, points, by }) => (
   <View style={styles.roundHeader}> 
     <Text style={styles.roundTitle}>{title}</Text>
@@ -71,20 +86,117 @@ const MatchBox: React.FC<Match> = ({ top, bottom, winner }) => (
 );
 
 export const BracketsScreen: React.FC = () => {
+  const [selectedEventId, setSelectedEventId] = React.useState<string | null>(null);
+  const [filter, setFilter] = React.useState<'all' | 'remaining' | 'final3'>('all');
+
+  const selectedEvent = React.useMemo(
+    () => BRACKET_EVENTS.find((event) => event.id === selectedEventId) ?? null,
+    [selectedEventId]
+  );
+
+  const filteredRounds = React.useMemo(() => {
+    if (!selectedEvent) {
+      return [];
+    }
+
+    if (filter === 'all') {
+      return selectedEvent.rounds;
+    }
+
+    if (filter === 'remaining') {
+      return selectedEvent.rounds
+        .map((round) => ({
+          ...round,
+          matches: round.matches.filter((match) => !match.winner),
+        }))
+        .filter((round) => round.matches.length > 0);
+    }
+
+    const flattened = selectedEvent.rounds.flatMap((round) =>
+      round.matches.map((match) => ({
+        round,
+        match,
+      }))
+    );
+
+    const finalMatches = flattened.slice(-3);
+
+    return finalMatches.map(({ round, match }) => ({
+      ...round,
+      matches: [match],
+    }));
+  }, [selectedEvent, filter]);
+
   return (
-    <SafeAreaView style={styles.container} edges={['top','left','right']}>
-      <View style={styles.titleBar}><Text style={styles.titleText}>Brackets</Text></View>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={styles.vContent} showsVerticalScrollIndicator={false}>
-        {SAMPLE.map((round, idx) => (
-          <View key={idx} style={styles.roundSection}>
-            <RoundHeader title={round.title} points={round.points} by={round.by} />
-            <View style={styles.roundList}>
-              {round.matches.map((m, i) => (
-                <MatchBox key={`${idx}-${i}`} {...m} />
-              ))}
+        {!selectedEvent && (
+          <>
+            <Text style={styles.pageTitle}>Current ABT Events</Text>
+            {BRACKET_EVENTS.map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                style={styles.eventCard}
+                onPress={() => {
+                  setSelectedEventId(event.id);
+                  setFilter('all');
+                }}
+              >
+                <Text style={styles.eventName}>{event.name}</Text>
+                <Text style={styles.eventMeta}>{event.location}</Text>
+                <Text style={styles.eventMeta}>{`${event.rounds.length} rounds`}</Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {selectedEvent && (
+          <>
+            <TouchableOpacity style={styles.backLink} onPress={() => setSelectedEventId(null)}>
+              <Text style={styles.backLinkText}>← Back to Events</Text>
+            </TouchableOpacity>
+            <Text style={styles.pageTitle}>{selectedEvent.name}</Text>
+            <Text style={styles.eventMeta}>{selectedEvent.location}</Text>
+
+            <View style={styles.filterRow}>
+              <TouchableOpacity
+                style={[styles.filterPill, filter === 'all' && styles.filterPillActive]}
+                onPress={() => setFilter('all')}
+              >
+                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterPill, filter === 'remaining' && styles.filterPillActive]}
+                onPress={() => setFilter('remaining')}
+              >
+                <Text style={[styles.filterText, filter === 'remaining' && styles.filterTextActive]}>
+                  Remaining
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterPill, filter === 'final3' && styles.filterPillActive]}
+                onPress={() => setFilter('final3')}
+              >
+                <Text style={[styles.filterText, filter === 'final3' && styles.filterTextActive]}>Final 3</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        ))}
+
+            {filteredRounds.length === 0 ? (
+              <Text style={styles.emptyText}>No matches to display for this filter.</Text>
+            ) : (
+              filteredRounds.map((round, idx) => (
+                <View key={`${round.title}-${idx}`} style={styles.roundSection}>
+                  <RoundHeader title={round.title} points={round.points} by={round.by} />
+                  <View style={styles.roundList}>
+                    {round.matches.map((m, i) => (
+                      <MatchBox key={`${idx}-${i}`} {...m} />
+                    ))}
+                  </View>
+                </View>
+              ))
+            )}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -92,9 +204,54 @@ export const BracketsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { ...theme.typography.heading, color: '#FFF', fontWeight: '700', fontSize: 18 },
   vContent: { paddingVertical: theme.spacing['2xl'], paddingHorizontal: theme.spacing['3xl'], paddingBottom: 160, gap: theme.spacing['2xl'] },
+  pageTitle: { ...theme.typography.heading, fontWeight: '800', fontSize: 22, color: theme.colors.textPrimary },
+  eventCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: theme.spacing['2xl'],
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    gap: theme.spacing.xs,
+  },
+  eventName: { ...theme.typography.heading, fontSize: 18, fontWeight: '700', color: theme.colors.textPrimary },
+  eventMeta: { ...theme.typography.caption, color: '#6B7280' },
+  backLink: { marginTop: theme.spacing.sm },
+  backLinkText: { ...theme.typography.caption, color: '#1B365D', fontWeight: '700' },
+  filterRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing['2xl'],
+    marginBottom: theme.spacing.md,
+  },
+  filterPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#1B365D',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  filterPillActive: {
+    backgroundColor: '#1B365D',
+  },
+  filterText: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    color: '#1B365D',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
+  emptyText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+  },
   roundSection: { width: '100%' },
   roundList: { gap: theme.spacing.md },
   roundHeader: { backgroundColor: '#FFFFFF', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: theme.spacing.md, alignItems: 'center' },

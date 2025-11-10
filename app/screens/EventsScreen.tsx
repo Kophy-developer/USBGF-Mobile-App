@@ -18,10 +18,6 @@ export const EventsScreen: React.FC = () => {
     setSelectorOpen(false);
   };
 
-  const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
-    <View style={styles.titleBar}><Text style={styles.titleText}>{title}</Text></View>
-  );
-
   const Row: React.FC<{ left: string } > = ({ left }) => (
     <View style={styles.row}>
       <Text style={styles.rowLeft}>{left}</Text>
@@ -30,9 +26,7 @@ export const EventsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','left','right']}>
-      <SectionHeader title={viewType ? 'Events' : 'Events'} />
-
+    <SafeAreaView style={styles.container} edges={['left','right']}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {!viewType && (
           <Text style={styles.helper}>Select an events type to view</Text>
@@ -40,7 +34,7 @@ export const EventsScreen: React.FC = () => {
 
         {viewType === 'ABT' && (
           <>
-            <SectionHeader title="Events" />
+            <Text style={styles.sectionHeading}>Current ABT Events</Text>
             <Row left="Viking Classic (Minnesota)" />
             <View style={styles.detailBox}>
               <Row left="Boston Open (Massachusetts)" />
@@ -63,7 +57,7 @@ export const EventsScreen: React.FC = () => {
 
         {viewType === 'ONLINE' && (
           <>
-            <SectionHeader title="Online Events" />
+            <Text style={styles.sectionHeading}>Online Events</Text>
             <View style={styles.tabsRow}>
               <Text style={styles.tabActive}>Accepting</Text>
               <Text style={styles.tab}>In Progress</Text>
@@ -79,14 +73,13 @@ export const EventsScreen: React.FC = () => {
       <Modal transparent visible={selectorOpen} animationType="fade">
         <Pressable style={styles.modalBackdrop} onPress={() => setSelectorOpen(false)} />
         <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Which events do you want to view?</Text>
           <TouchableOpacity style={styles.modalBtn} onPress={() => choose('ABT')}>
-            <Text style={styles.modalBtnText}>ABT Events</Text>
+            <Text style={styles.modalBtnText}>Current ABT Events</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.modalBtn} onPress={() => choose('ONLINE')}>
             <Text style={styles.modalBtnText}>Online Events</Text>
           </TouchableOpacity>
-      </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -96,8 +89,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
   content: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160, gap: theme.spacing.md },
   helper: { textAlign: 'center', color: theme.colors.textSecondary, marginTop: theme.spacing['2xl'] },
-  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
+  sectionHeading: { ...theme.typography.heading, fontSize: 20, fontWeight: '700', color: theme.colors.textPrimary },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: theme.spacing.lg, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   rowLeft: { ...theme.typography.body, fontSize: 18, color: theme.colors.textPrimary, flex: 1, paddingRight: 8 },
   detailBox: { },
@@ -112,7 +104,6 @@ const styles = StyleSheet.create({
 
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   modalCard: { position: 'absolute', left: 24, right: 24, top: '30%', backgroundColor: '#FFFFFF', borderRadius: 12, padding: theme.spacing['2xl'], gap: theme.spacing.md, borderWidth: 1, borderColor: theme.colors.border },
-  modalTitle: { ...theme.typography.heading, fontWeight: '700', fontSize: 18, marginBottom: theme.spacing.sm, color: theme.colors.textPrimary },
   modalBtn: { backgroundColor: '#1B365D', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalBtnText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
 });

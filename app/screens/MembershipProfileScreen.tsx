@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Pressable } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
@@ -8,10 +8,80 @@ import { RootStackParamList } from '../navigation';
 import * as ImagePicker from 'expo-image-picker';
 import { TextField } from '../components/TextField';
 import { Button } from '../components/Button';
+import { SelectField, SelectOption } from '../components/SelectField';
+
+const COUNTRY_OPTIONS: SelectOption[] = [
+  { label: 'United States', value: 'United States' },
+];
+
+const STATE_OPTIONS: SelectOption[] = [
+  { label: 'Alabama', value: 'Alabama' },
+  { label: 'Alaska', value: 'Alaska' },
+  { label: 'Arizona', value: 'Arizona' },
+  { label: 'Arkansas', value: 'Arkansas' },
+  { label: 'California', value: 'California' },
+  { label: 'Colorado', value: 'Colorado' },
+  { label: 'Connecticut', value: 'Connecticut' },
+  { label: 'Delaware', value: 'Delaware' },
+  { label: 'District of Columbia', value: 'District of Columbia' },
+  { label: 'Florida', value: 'Florida' },
+  { label: 'Georgia', value: 'Georgia' },
+  { label: 'Hawaii', value: 'Hawaii' },
+  { label: 'Idaho', value: 'Idaho' },
+  { label: 'Illinois', value: 'Illinois' },
+  { label: 'Indiana', value: 'Indiana' },
+  { label: 'Iowa', value: 'Iowa' },
+  { label: 'Kansas', value: 'Kansas' },
+  { label: 'Kentucky', value: 'Kentucky' },
+  { label: 'Louisiana', value: 'Louisiana' },
+  { label: 'Maine', value: 'Maine' },
+  { label: 'Maryland', value: 'Maryland' },
+  { label: 'Massachusetts', value: 'Massachusetts' },
+  { label: 'Michigan', value: 'Michigan' },
+  { label: 'Minnesota', value: 'Minnesota' },
+  { label: 'Mississippi', value: 'Mississippi' },
+  { label: 'Missouri', value: 'Missouri' },
+  { label: 'Montana', value: 'Montana' },
+  { label: 'Nebraska', value: 'Nebraska' },
+  { label: 'Nevada', value: 'Nevada' },
+  { label: 'New Hampshire', value: 'New Hampshire' },
+  { label: 'New Jersey', value: 'New Jersey' },
+  { label: 'New Mexico', value: 'New Mexico' },
+  { label: 'New York', value: 'New York' },
+  { label: 'North Carolina', value: 'North Carolina' },
+  { label: 'North Dakota', value: 'North Dakota' },
+  { label: 'Ohio', value: 'Ohio' },
+  { label: 'Oklahoma', value: 'Oklahoma' },
+  { label: 'Oregon', value: 'Oregon' },
+  { label: 'Pennsylvania', value: 'Pennsylvania' },
+  { label: 'Rhode Island', value: 'Rhode Island' },
+  { label: 'South Carolina', value: 'South Carolina' },
+  { label: 'South Dakota', value: 'South Dakota' },
+  { label: 'Tennessee', value: 'Tennessee' },
+  { label: 'Texas', value: 'Texas' },
+  { label: 'Utah', value: 'Utah' },
+  { label: 'Vermont', value: 'Vermont' },
+  { label: 'Virginia', value: 'Virginia' },
+  { label: 'Washington', value: 'Washington' },
+  { label: 'West Virginia', value: 'West Virginia' },
+  { label: 'Wisconsin', value: 'Wisconsin' },
+  { label: 'Wyoming', value: 'Wyoming' },
+];
+
+const TIMEZONE_OPTIONS: SelectOption[] = [
+  { label: 'Atlantic Time (AT)', value: 'Atlantic Time (AT)' },
+  { label: 'Eastern Time (ET)', value: 'Eastern Time (ET)' },
+  { label: 'Central Time (CT)', value: 'Central Time (CT)' },
+  { label: 'Mountain Time (MT)', value: 'Mountain Time (MT)' },
+  { label: 'Mountain Time (Arizona)', value: 'Mountain Time (Arizona)' },
+  { label: 'Pacific Time (PT)', value: 'Pacific Time (PT)' },
+  { label: 'Alaska Time (AKT)', value: 'Alaska Time (AKT)' },
+  { label: 'Hawaii-Aleutian Time (HAT)', value: 'Hawaii-Aleutian Time (HAT)' },
+  { label: 'Chamorro Time (CHST)', value: 'Chamorro Time (CHST)' },
+];
 
 export const MembershipProfileScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [avatarUri, setAvatarUri] = React.useState<string | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
 
@@ -30,7 +100,10 @@ export const MembershipProfileScreen: React.FC = () => {
     if (status !== 'granted') {
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setAvatarUri(result.assets[0].uri);
     }
@@ -38,29 +111,6 @@ export const MembershipProfileScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton} onPress={() => setIsMenuOpen((v) => !v)}>
-          <Text style={styles.menuIcon}>☰</Text>
-        </TouchableOpacity>
-
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/USBGF_com_logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityLabel="USBGF Logo"
-          />
-        </View>
-
-        <TouchableOpacity style={styles.searchButton}>
-          <Text style={styles.searchIcon}>⌕</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.titleBar}>
-        <Text style={styles.titleText}>Profile</Text>
-      </View>
-
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <View style={styles.topRow}>
           <View style={styles.avatarWrapper}>
@@ -107,10 +157,10 @@ export const MembershipProfileScreen: React.FC = () => {
             <TextField label="Name" placeholder="Full name" value={name} onChangeText={setName} />
             <TextField label="Email" placeholder="email@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             <TextField label="Phone" placeholder="Enter phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-            <TextField label="State" placeholder="State / Region" value={stateRegion} onChangeText={setStateRegion} />
+            <SelectField label="State" value={stateRegion} onValueChange={setStateRegion} options={STATE_OPTIONS} placeholder="Select state" />
             <TextField label="Birthdate" placeholder="YYYY-MM-DD" value={birthdate} onChangeText={setBirthdate} />
-            <TextField label="Country" placeholder="Country" value={country} onChangeText={setCountry} />
-            <TextField label="Timezone" placeholder="Timezone" value={timezone} onChangeText={setTimezone} />
+            <SelectField label="Country" value={country} onValueChange={setCountry} options={COUNTRY_OPTIONS} placeholder="Select country" />
+            <SelectField label="Timezone" value={timezone} onValueChange={setTimezone} options={TIMEZONE_OPTIONS} placeholder="Select timezone" />
             <View style={styles.inlineChips}>
               <View style={[styles.badge, styles.badgeActive]}><Text style={styles.badgeText}>{membershipStatus}</Text></View>
               <View style={styles.badge}><Text style={styles.badgeText}>{membershipLevel}</Text></View>
@@ -139,56 +189,12 @@ export const MembershipProfileScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {isMenuOpen && (
-        <>
-          <Pressable style={styles.backdrop} onPress={() => setIsMenuOpen(false)} accessibilityLabel="Close menu" />
-          <View style={styles.menuDropdown}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Events'); }}>
-              <Text style={styles.menuItemText}>View Events</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Dashboard' as any, { screen: 'CurrentEntries' } as any); }}>
-              <Text style={styles.menuItemText}>Current Entries</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any); }}>
-              <Text style={styles.menuItemText}>Account Balance</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.navigate('MembershipPlans'); }}>
-              <Text style={styles.menuItemText}>Membership Plan</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} onPress={() => { setIsMenuOpen(false); navigation.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] }); }}>
-              <Text style={[styles.menuItemText, styles.logoutText]}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing['3xl'], paddingVertical: theme.spacing.sm,
-    paddingTop: theme.spacing['2xl'], backgroundColor: theme.colors.surface, minHeight: 120,
-  },
-  menuButton: { padding: theme.spacing.sm },
-  menuIcon: { fontSize: 30, color: theme.colors.textPrimary },
-  logoContainer: { alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 240, height: 120 },
-  searchButton: { padding: theme.spacing.sm },
-  searchIcon: { fontSize: 45, color: theme.colors.textPrimary },
-
-  titleBar: {
-    backgroundColor: '#1B365D', paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'],
-    marginTop: theme.spacing.lg, borderRadius: 4,
-  },
-  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 22 },
 
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160 },
@@ -229,15 +235,4 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: '#E5E7EB', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 },
   badgeActive: { backgroundColor: '#16A34A' },
   badgeText: { color: '#111', fontWeight: '700' },
-
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', zIndex: 900 },
-  menuDropdown: {
-    position: 'absolute', top: 120, left: theme.spacing['3xl'], width: 220, backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5, overflow: 'hidden', zIndex: 1000,
-  },
-  menuItem: { paddingVertical: theme.spacing.lg, paddingHorizontal: theme.spacing['2xl'], backgroundColor: '#FFFFFF' },
-  menuItemText: { fontSize: 16, color: theme.colors.textPrimary, fontWeight: '500' },
-  logoutText: { color: '#B91C1C' },
-  menuDivider: { height: 1, backgroundColor: theme.colors.border },
 });

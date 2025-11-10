@@ -68,19 +68,6 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
     await loadEvents(true);
   }, [loadEvents]);
 
-  const formatMonthYear = (month: string, year: string): string => {
-    return `${month} ${year}`;
-  };
-
-  const groupedEvents = events.reduce((acc, event) => {
-    const key = `${event.month} ${event.year}`;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(event);
-    return acc;
-  }, {} as Record<string, ABTEvent[]>);
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1B365D" translucent />
@@ -123,36 +110,26 @@ export const ABTCalendarScreen: React.FC<ABTCalendarScreenProps> = ({ navigation
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          {Object.keys(groupedEvents).length === 0 ? (
+          {events.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No events found</Text>
             </View>
           ) : (
-            Object.keys(groupedEvents).map((monthYear) => {
-              const monthEvents = groupedEvents[monthYear];
-              const firstEvent = monthEvents[0];
-              
-              return (
-                <View key={monthYear} style={styles.monthSection}>
-                  <Text style={styles.monthHeader}>{monthYear}</Text>
-                  {monthEvents.map((event) => (
-                    <TouchableOpacity
-                      key={event.id}
-                      style={styles.eventCard}
-                      onPress={() => {}}
-                    >
-                      <View style={styles.eventHeader}>
-                        <View style={styles.dateBadge}>
-                          <Text style={styles.dateBadgeText}>{event.dateRange}</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.eventTitle}>{event.title}</Text>
-                      <Text style={styles.eventLocation}>{event.location}</Text>
-                    </TouchableOpacity>
-                  ))}
+            events.map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                style={styles.eventCard}
+                onPress={() => {}}
+              >
+                <View style={styles.eventHeader}>
+                  <View style={styles.dateBadge}>
+                    <Text style={styles.dateBadgeText}>{event.dateRange}</Text>
+                  </View>
                 </View>
-              );
-            })
+                <Text style={styles.eventTitle}>{event.title}</Text>
+                <Text style={styles.eventLocation}>{event.location}</Text>
+              </TouchableOpacity>
+            ))
           )}
         </ScrollView>
       )}
@@ -204,8 +181,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing['2xl'],
+    paddingBottom: theme.spacing['5xl'] * 3,
+    paddingHorizontal: theme.spacing['3xl'],
     backgroundColor: theme.colors.surface,
+    gap: theme.spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -242,19 +221,6 @@ const styles = StyleSheet.create({
     ...theme.typography.button,
     color: theme.colors.surface,
     fontWeight: '700',
-  },
-  monthSection: {
-    paddingHorizontal: theme.spacing['3xl'],
-    marginBottom: theme.spacing['2xl'],
-  },
-  monthHeader: {
-    ...theme.typography.heading,
-    fontSize: 22,
-    color: theme.colors.textPrimary,
-    fontWeight: '700',
-    marginBottom: theme.spacing.lg,
-    marginTop: theme.spacing.lg,
-    fontFamily: theme.typography.heading.fontFamily,
   },
   eventCard: {
     backgroundColor: theme.colors.surface,
