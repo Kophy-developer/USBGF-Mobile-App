@@ -1,162 +1,298 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
+import { useAuth } from '../context/AuthContext';
+import { fetchMatches, fetchBracketList, fetchBracketInfo, BracketNode } from '../services/api';
 
-type Match = { top: string; bottom: string; winner?: string };
-type Round = { title: string; points: string; by: string; matches: Match[] };
+type FlattenedMatch = {
+  contestId: number;
+  label: string;
+  roundOfPlay: number;
+  contestants: Array<{ name: string; isWinner: boolean }>;
+};
 
-const SAMPLE: Round[] = [
-  {
-    title: 'Round 1',
-    points: '13 Points',
-    by: 'By: 2025-09-03',
-    matches: [
-      { top: 'Catherine Winfree', bottom: 'Jeanna Kish', winner: 'Jeanna Kish' },
-      { top: 'Marjie Harbrecht', bottom: 'Irina Litzenberger', winner: 'Marjie Harbrecht' },
-      { top: 'Amy Latek', bottom: 'Erica Wutka', winner: 'Amy Latek' },
-      { top: 'Lynda Clay', bottom: 'Marianne Bowen', winner: 'Lynda Clay' },
-      { top: 'Cameron Stangel', bottom: 'Mary Morse', winner: 'Mary Morse' },
-      { top: 'Genna Cowan', bottom: 'Kat Denison', winner: 'Genna Cowan' },
-      { top: 'Vera Holley', bottom: 'Teri Harmon', winner: 'Teri Harmon' },
-    ],
-  },
-  {
-    title: 'Round 2',
-    points: '13 Points',
-    by: 'By: 2025-09-17',
-    matches: [
-      { top: 'Jeanna Kish', bottom: 'Marjie Harbrecht', winner: 'Jeanna Kish' },
-      { top: 'Amy Latek', bottom: 'Lynda Clay', winner: 'Lynda Clay' },
-      { top: 'Mary Morse', bottom: 'Genna Cowan', winner: 'Genna Cowan' },
-      { top: 'Teri Harmon', bottom: '—' },
-    ],
-  },
-  {
-    title: 'Round 3',
-    points: '13 Points',
-    by: 'By: 2025-10-01',
-    matches: [
-      { top: 'Jeanna Kish', bottom: 'Lynda Clay', winner: 'Lynda Clay' },
-      { top: 'Genna Cowan', bottom: 'Teri Harmon', winner: 'Antoinette-Marie Will…' },
-    ],
-  },
-  {
-    title: 'Round 4',
-    points: '13 Points',
-    by: 'By: 2025-10-15',
-    matches: [
-      { top: 'Lynda Clay', bottom: 'Antoinette-Marie Will…', winner: 'Antoinette-Marie Will…' },
-    ],
-  },
-];
-
-const BRACKET_EVENTS = [
-  {
-    id: 'viking-classic',
-    name: 'Viking Classic',
-    location: 'Minnesota',
-    rounds: SAMPLE,
-  },
-  {
-    id: 'boston-open',
-    name: 'Boston Open',
-    location: 'Massachusetts',
-    rounds: SAMPLE,
-  },
-];
-
-const RoundHeader: React.FC<{ title: string; points: string; by: string }> = ({ title, points, by }) => (
-  <View style={styles.roundHeader}> 
-    <Text style={styles.roundTitle}>{title}</Text>
-    <Text style={styles.roundMeta}>{points}</Text>
-    <Text style={styles.roundMeta}>{by}</Text>
-  </View>
-);
-
-const MatchBox: React.FC<Match> = ({ top, bottom, winner }) => (
-  <View style={styles.matchBox}>
-    <View style={[styles.playerRow, winner === top && styles.winnerRow]}>
-      <Text numberOfLines={1} style={styles.playerText}>{top}</Text>
-    </View>
-    <View style={[styles.playerRow, winner === bottom && styles.winnerRow]}> 
-      <Text numberOfLines={1} style={styles.playerText}>{bottom}</Text>
-    </View>
-  </View>
-);
+type EventSummary = {
+  id: number;
+  name: string;
+  clubId?: number;
+  startTime?: string;
+};
 
 export const BracketsScreen: React.FC = () => {
-  const [selectedEventId, setSelectedEventId] = React.useState<string | null>(null);
-  const [filter, setFilter] = React.useState<'all' | 'remaining' | 'final3'>('all');
+  const { token } = useAuth();
+  const [events, setEvents] = useState<EventSummary[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [eventError, setEventError] = useState<string | null>(null);
 
-  const selectedEvent = React.useMemo(
-    () => BRACKET_EVENTS.find((event) => event.id === selectedEventId) ?? null,
-    [selectedEventId]
+  const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null);
+  const [filter, setFilter] = useState<'all' | 'remaining' | 'final'>('all');
+  const [brackets, setBrackets] = useState<
+    Array<{ id: number; name: string; matches: FlattenedMatch[] }>
+  >([]);
+  const [loadingBrackets, setLoadingBrackets] = useState(false);
+  const [bracketError, setBracketError] = useState<string | null>(null);
+
+  const fetchEvents = useCallback(async () => {
+    if (!token) {
+      setEventError('Please sign in to view brackets.');
+      return;
+    }
+    setLoadingEvents(true);
+    setEventError(null);
+    try {
+      const [abt, online] = await Promise.all([fetchMatches(token, 5), fetchMatches(token, 2)]);
+
+      const eventMap = new Map<number, EventSummary>();
+      const collect = (payload: any, clubId: number) => {
+        ['awaitingResults', 'awaitingOpponent', 'awaitingDraw'].forEach((key) => {
+          const list = payload?.[key];
+          if (Array.isArray(list)) {
+            list.forEach((item: any) => {
+              const event = item.event;
+              if (event?.id) {
+                eventMap.set(event.id, {
+                  id: event.id,
+                  name: event.name ?? `Event #${event.id}`,
+                  clubId,
+                  startTime: event.startTime,
+                });
+              }
+            });
+          }
+        });
+      };
+
+      collect(abt, 5);
+      collect(online, 2);
+
+      setEvents(Array.from(eventMap.values()));
+    } catch (err: any) {
+      setEventError(err?.message || 'Unable to load events.');
+      setEvents([]);
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  const flattenMatches = useCallback((nodes: BracketNode[]): FlattenedMatch[] => {
+    const matches: FlattenedMatch[] = [];
+
+    const traverse = (node: BracketNode) => {
+      if (node.type === 'contest' && node.children) {
+        const contestants = node.children.filter((child) => child.type === 'contestant');
+        if (contestants.length >= 1) {
+          matches.push({
+            contestId: node.data?.id ?? Math.random(),
+            label: node.data?.label ?? 'Match',
+            roundOfPlay: node.data?.roundOfPlay ?? 0,
+            contestants: contestants.map((child) => ({
+              name: child.data?.entrant?.name ?? 'TBD',
+              isWinner: !!child.data?.isWinner,
+            })),
+          });
+        }
+      }
+      node.children?.forEach(traverse);
+    };
+
+    nodes.forEach(traverse);
+    return matches;
+  }, []);
+
+  const loadBrackets = useCallback(
+    async (event: EventSummary, selectedFilter: 'all' | 'remaining' | 'final') => {
+      if (!token) {
+        return;
+      }
+      setLoadingBrackets(true);
+      setBracketError(null);
+      try {
+        const list = await fetchBracketList(token, event.id);
+        if (!list.length) {
+          setBrackets([]);
+          setBracketError('No brackets available for this event yet.');
+          return;
+        }
+
+        const fromRoundParam =
+          selectedFilter === 'remaining' ? 0 : selectedFilter === 'final' ? -3 : undefined;
+
+        const infos = await Promise.all(
+          list.map((bracket) =>
+            fetchBracketInfo(token, bracket.id, fromRoundParam).then((response) => ({
+              bracket,
+              response,
+            }))
+          )
+        );
+
+        const parsed = infos.map(({ bracket, response }) => {
+          const matches = response?.data?.children
+            ? flattenMatches(response.data.children)
+            : [];
+          return {
+            id: bracket.id,
+            name: bracket.name,
+            matches,
+          };
+        });
+
+        setBrackets(parsed);
+      } catch (err: any) {
+        setBracketError(err?.message || 'Unable to load bracket information.');
+        setBrackets([]);
+      } finally {
+        setLoadingBrackets(false);
+      }
+    },
+    [token, flattenMatches]
   );
 
-  const filteredRounds = React.useMemo(() => {
-    if (!selectedEvent) {
-      return [];
+  useEffect(() => {
+    if (selectedEvent) {
+      loadBrackets(selectedEvent, filter);
+    }
+  }, [selectedEvent, filter, loadBrackets]);
+
+  const groupedMatches = (matches: FlattenedMatch[]) => {
+    const groups = new Map<number, FlattenedMatch[]>();
+    matches.forEach((match) => {
+      const key = match.roundOfPlay ?? 0;
+      const list = groups.get(key) ?? [];
+      list.push(match);
+      groups.set(key, list);
+    });
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([round, list]) => ({ round, matches: list }));
+  };
+
+  const renderEvents = () => {
+    if (loadingEvents) {
+      return (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      );
     }
 
-    if (filter === 'all') {
-      return selectedEvent.rounds;
+    if (eventError) {
+      return (
+        <View style={styles.centerContent}>
+          <Text style={styles.errorText}>{eventError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchEvents}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
     }
 
-    if (filter === 'remaining') {
-      return selectedEvent.rounds
-        .map((round) => ({
-          ...round,
-          matches: round.matches.filter((match) => !match.winner),
-        }))
-        .filter((round) => round.matches.length > 0);
+    if (!events.length) {
+      return (
+        <View style={styles.centerContent}>
+          <Text style={styles.infoText}>No events available yet.</Text>
+        </View>
+      );
     }
 
-    const flattened = selectedEvent.rounds.flatMap((round) =>
-      round.matches.map((match) => ({
-        round,
-        match,
-      }))
+    return (
+      <>
+        <Text style={styles.pageTitle}>Upcoming Events</Text>
+        {events.map((event) => (
+          <TouchableOpacity
+            key={event.id}
+            style={styles.eventCard}
+            onPress={() => {
+              setSelectedEvent(event);
+              setFilter('all');
+            }}
+          >
+            <Text style={styles.eventName}>{event.name}</Text>
+            {event.startTime && <Text style={styles.eventMeta}>Starts: {event.startTime}</Text>}
+            <Text style={styles.eventMeta}>Club: {event.clubId ?? '—'}</Text>
+          </TouchableOpacity>
+        ))}
+      </>
     );
+  };
 
-    const finalMatches = flattened.slice(-3);
+  const renderBrackets = () => {
+    if (!selectedEvent) return null;
 
-    return finalMatches.map(({ round, match }) => ({
-      ...round,
-      matches: [match],
-    }));
-  }, [selectedEvent, filter]);
+    if (loadingBrackets) {
+      return (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      );
+    }
+
+    if (bracketError) {
+      return (
+        <View style={styles.centerContent}>
+          <Text style={styles.errorText}>{bracketError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => loadBrackets(selectedEvent, filter)}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!brackets.length) {
+      return (
+        <View style={styles.centerContent}>
+          <Text style={styles.infoText}>No bracket data available for this filter.</Text>
+        </View>
+      );
+    }
+
+    return brackets.map((bracket) => {
+      const grouped = groupedMatches(bracket.matches);
+      return (
+        <View key={bracket.id} style={styles.bracketCard}>
+          <Text style={styles.bracketTitle}>{bracket.name}</Text>
+          {grouped.map((group) => (
+            <View key={group.round} style={styles.roundBlock}>
+              <Text style={styles.roundTitle}>Round {group.round}</Text>
+              {group.matches.map((match) => (
+                <View key={match.contestId} style={styles.matchRow}>
+                  {match.contestants.map((contestant, idx) => (
+                    <View
+                      key={idx}
+                      style={[styles.contestantBadge, contestant.isWinner && styles.contestantWinner]}
+                    >
+                      <Text
+                        style={[styles.contestantText, contestant.isWinner && styles.contestantTextWinner]}
+                      >
+                        {contestant.name}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      );
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={styles.vContent} showsVerticalScrollIndicator={false}>
-        {!selectedEvent && (
+        {!selectedEvent ? (
+          renderEvents()
+        ) : (
           <>
-            <Text style={styles.pageTitle}>Current ABT Events</Text>
-            {BRACKET_EVENTS.map((event) => (
-              <TouchableOpacity
-                key={event.id}
-                style={styles.eventCard}
-                onPress={() => {
-                  setSelectedEventId(event.id);
-                  setFilter('all');
-                }}
-              >
-                <Text style={styles.eventName}>{event.name}</Text>
-                <Text style={styles.eventMeta}>{event.location}</Text>
-                <Text style={styles.eventMeta}>{`${event.rounds.length} rounds`}</Text>
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
-
-        {selectedEvent && (
-          <>
-            <TouchableOpacity style={styles.backLink} onPress={() => setSelectedEventId(null)}>
+            <TouchableOpacity style={styles.backLink} onPress={() => setSelectedEvent(null)}>
               <Text style={styles.backLinkText}>← Back to Events</Text>
             </TouchableOpacity>
             <Text style={styles.pageTitle}>{selectedEvent.name}</Text>
-            <Text style={styles.eventMeta}>{selectedEvent.location}</Text>
 
             <View style={styles.filterRow}>
               <TouchableOpacity
@@ -174,27 +310,14 @@ export const BracketsScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.filterPill, filter === 'final3' && styles.filterPillActive]}
-                onPress={() => setFilter('final3')}
+                style={[styles.filterPill, filter === 'final' && styles.filterPillActive]}
+                onPress={() => setFilter('final')}
               >
-                <Text style={[styles.filterText, filter === 'final3' && styles.filterTextActive]}>Final 3</Text>
+                <Text style={[styles.filterText, filter === 'final' && styles.filterTextActive]}>Final 3</Text>
               </TouchableOpacity>
             </View>
 
-            {filteredRounds.length === 0 ? (
-              <Text style={styles.emptyText}>No matches to display for this filter.</Text>
-            ) : (
-              filteredRounds.map((round, idx) => (
-                <View key={`${round.title}-${idx}`} style={styles.roundSection}>
-                  <RoundHeader title={round.title} points={round.points} by={round.by} />
-                  <View style={styles.roundList}>
-                    {round.matches.map((m, i) => (
-                      <MatchBox key={`${idx}-${i}`} {...m} />
-                    ))}
-                  </View>
-                </View>
-              ))
-            )}
+            {renderBrackets()}
           </>
         )}
       </ScrollView>
@@ -248,19 +371,78 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: '#FFFFFF',
   },
-  emptyText: {
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing['4xl'],
+    gap: theme.spacing.lg,
+  },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.error,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing['2xl'],
+    borderRadius: theme.radius.md,
+  },
+  retryText: {
+    ...theme.typography.button,
+    color: theme.colors.surface,
+    fontWeight: '700',
+  },
+  infoText: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
-  roundSection: { width: '100%' },
-  roundList: { gap: theme.spacing.md },
-  roundHeader: { backgroundColor: '#FFFFFF', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 8, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: theme.spacing.md, alignItems: 'center' },
-  roundTitle: { ...theme.typography.heading, fontWeight: '800', marginBottom: 4 },
-  roundMeta: { ...theme.typography.caption, color: '#6B7280', fontSize: 12 },
-  matchBox: { backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: theme.spacing.md },
-  playerRow: { paddingVertical: 8, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  winnerRow: { backgroundColor: '#E6EEF8' },
-  playerText: { color: '#111827' },
+  bracketCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing['2xl'],
+    gap: theme.spacing.md,
+  },
+  bracketTitle: {
+    ...theme.typography.heading,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+  },
+  roundBlock: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  roundTitle: {
+    ...theme.typography.body,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  },
+  matchRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap',
+  },
+  contestantBadge: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.md,
+  },
+  contestantWinner: {
+    backgroundColor: '#1A9E55',
+  },
+  contestantText: {
+    ...theme.typography.caption,
+    color: theme.colors.textPrimary,
+  },
+  contestantTextWinner: {
+    color: '#FFFFFF',
+  },
 });
 
 

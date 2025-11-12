@@ -1,88 +1,27 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import * as DocumentPicker from 'expo-document-picker';
-
-interface AwaitingResultRow {
-  opponent: string;
-  report: Array<'W' | 'L'>;
-  event: string;
-  round: string;
-}
-
-interface AwaitingOpponentRow {
-  waitingFor: string;
-  event: string;
-  round: string;
-  format: string;
-  deadline?: string;
-}
-
-interface AwaitingDrawRow {
-  event: string;
-  bracket: string;
-}
-
-const awaitingResults: AwaitingResultRow[] = [
-  {
-    opponent: 'Kevin Jones',
-    report: ['W', 'L'],
-    event: 'OTS Monthly Double Elimination - October 2025',
-    round: '1',
-  },
-  {
-    opponent: 'Jon Douglas',
-    report: ['L', 'W'],
-    event: 'Rapid Rounds - October 2025',
-    round: '4',
-  },
-  {
-    opponent: 'Arvel Toten',
-    report: ['W', 'L'],
-    event: 'Member Blitz - 2026',
-    round: '1',
-  },
-  {
-    opponent: 'Irina Litzenberger',
-    report: ['W', 'L'],
-    event: 'OTS Monthly Double Elimination - November 2025',
-    round: '1',
-  },
-];
-
-const awaitingOpponents: AwaitingOpponentRow[] = [
-  {
-    waitingFor: 'Winner of Arvel Toten vs. Roberto Litzenberger',
-    event: 'Member Blitz - 2025',
-    round: '3',
-    format: '7 Points',
-  },
-  {
-    waitingFor: 'Winner of Stephen Douglas vs. Pete Jarvis',
-    event: 'Pick-a-Pro Lesson Jackpot - 2025',
-    round: '2',
-    format: '9 Points',
-  },
-];
-
-const awaitingDraw: AwaitingDrawRow[] = [
-  {
-    event: 'Member Blitz - 2025',
-    bracket: 'Bracket Winners (not played)',
-  },
-  {
-    event: 'Pick-a-Pro Lesson Jackpot - 2025',
-    bracket: 'Bracket Winners (not played)',
-  },
-  {
-    event: 'USBGF Divisional - November 2025: Masters',
-    bracket: 'Qualifier #3',
-  },
-];
+import { useAuth } from '../context/AuthContext';
+import { fetchUpcomingMatches, MatchesPayload } from '../services/api';
 
 export const CurrentEntriesScreen: React.FC = () => {
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
+  const [matchesData, setMatchesData] = useState<MatchesPayload | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { token, user } = useAuth();
 
   const handleUploadReport = async (opponent: string) => {
     try {
@@ -103,77 +42,191 @@ export const CurrentEntriesScreen: React.FC = () => {
     setExpandedResult((prev) => (prev === id ? null : id));
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionHeading}>Awaiting Match Result</Text>
-        {awaitingResults.map((item, index) => {
-            const orderedReport = [...item.report].sort((a, b) => {
-              if (a === b) return 0;
-              return a === 'W' ? -1 : 1;
-            });
-            const id = `${item.opponent}-${index}`;
-            const isOpen = expandedResult === id;
+  const loadEntries = async (opts: { refresh?: boolean } = {}) => {
+    if (!token || !user?.playerId) {
+      return;
+    }
+    if (opts.refresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+    try {
+      const data = await fetchUpcomingMatches(token, { playerId: user.playerId });
+      setMatchesData(data);
+    } catch (err: any) {
+      setError(err?.message || 'Unable to load your current entries.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-            return (
-              <View key={id} style={styles.entryCard}>
-                <TouchableOpacity style={styles.entryHeader} onPress={() => toggleResult(id)}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.entryName}>{item.opponent}</Text>
-                    <Text style={styles.entryEvent}>{item.event}</Text>
-                  </View>
-                  <Text style={styles.entryChevron}>{isOpen ? '▴' : '▾'}</Text>
-                </TouchableOpacity>
-                {isOpen && (
-                  <View style={styles.entryDetails}>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Round</Text>
-                      <Text style={styles.detailValue}>{item.round}</Text>
-                    </View>
-                    <View style={[styles.detailRow, styles.detailReport]}>
-                      <Text style={styles.detailLabel}>Report</Text>
-                      <View style={styles.reportContainer}>
-                        {orderedReport.map((mark, idx) => (
-                          <TouchableOpacity
-                            key={`${mark}-${idx}`}
-                            style={[styles.reportBadge, mark === 'W' ? styles.reportWin : styles.reportLoss]}
-                            onPress={() => handleUploadReport(item.opponent)}
-                            activeOpacity={0.8}
-                          >
-                            <Text style={styles.reportText}>{mark}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
+  useEffect(() => {
+    loadEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user?.playerId]);
+
+  const awaitingResults = matchesData?.awaitingResults ?? [];
+  const awaitingOpponents = matchesData?.awaitingOpponent ?? [];
+  const awaitingDraw = matchesData?.awaitingDraw ?? [];
+
+  const isEmpty = useMemo(
+    () => awaitingResults.length === 0 && awaitingOpponents.length === 0 && awaitingDraw.length === 0,
+    [awaitingResults.length, awaitingOpponents.length, awaitingDraw.length]
+  );
+
+  const renderAwaitingResults = () => (
+    <>
+      <Text style={styles.sectionHeading}>Awaiting Match Result</Text>
+      {awaitingResults.map((item, index) => {
+        const id = `${item.contestId ?? item.opponent?.id ?? index}-${index}`;
+        const isOpen = expandedResult === id;
+
+        const actionBadges: Array<{ label: string; onPress?: () => void }> = [];
+        if (item.actions?.isAllowReportMatch) {
+          actionBadges.push({ label: 'Report', onPress: () => handleUploadReport(item.opponent?.name ?? 'Opponent') });
+        }
+        if (item.actions?.isRequestMatchFile) {
+          actionBadges.push({ label: 'Match File', onPress: () => handleUploadReport(item.opponent?.name ?? 'Opponent') });
+        }
+        if (item.actions?.isAllowContactOpponent) {
+          actionBadges.push({ label: 'Contact' });
+        }
+
+        return (
+          <View key={id} style={styles.entryCard}>
+            <TouchableOpacity style={styles.entryHeader} onPress={() => toggleResult(id)}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.entryName}>{item.opponent?.name ?? 'Opponent TBD'}</Text>
+                <Text style={styles.entryEvent}>{item.event?.name ?? 'Event TBD'}</Text>
+              </View>
+              <Text style={styles.entryChevron}>{isOpen ? '▴' : '▾'}</Text>
+            </TouchableOpacity>
+            {isOpen && (
+              <View style={styles.entryDetails}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Round</Text>
+                  <Text style={styles.detailValue}>{item.round ?? '—'}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Format</Text>
+                  <Text style={styles.detailValue}>{item.contestFormat ?? '—'}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Deadline</Text>
+                  <Text style={styles.detailValue}>{item.deadline ?? '—'}</Text>
+                </View>
+                {actionBadges.length > 0 && (
+                  <View style={[styles.detailRow, styles.detailReport]}>
+                    <Text style={styles.detailLabel}>Actions</Text>
+                    <View style={styles.reportContainer}>
+                      {actionBadges.map((badge, idx) => (
+                        <TouchableOpacity
+                          key={`${badge.label}-${idx}`}
+                          style={[styles.reportBadge, styles.reportAction]}
+                          onPress={badge.onPress}
+                          disabled={!badge.onPress}
+                        >
+                          <Text style={styles.reportText}>{badge.label}</Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
                 )}
               </View>
-            );
-          })}
-
-        <Text style={styles.sectionHeading}>Awaiting Opponent</Text>
-        {awaitingOpponents.map((item, index) => (
-          <View key={`${item.event}-${index}`} style={styles.simpleCard}>
-            <Text style={styles.entryName}>{item.waitingFor}</Text>
-            <Text style={styles.entryEvent}>{item.event}</Text>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Round</Text>
-              <Text style={styles.detailValue}>{item.round}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Format</Text>
-              <Text style={styles.detailValue}>{item.format}</Text>
-            </View>
+            )}
           </View>
-        ))}
+        );
+      })}
+    </>
+  );
 
-        <Text style={styles.sectionHeading}>Awaiting Draw</Text>
-        {awaitingDraw.map((item, index) => (
-          <View key={`${item.event}-${index}`} style={styles.simpleCard}>
-            <Text style={styles.entryName}>{item.event}</Text>
-            <Text style={styles.entryEvent}>{item.bracket}</Text>
+  const renderAwaitingOpponents = () => (
+    <>
+      <Text style={styles.sectionHeading}>Awaiting Opponent</Text>
+      {awaitingOpponents.map((item, index) => (
+        <View key={`${item.event?.id ?? index}-${index}`} style={styles.simpleCard}>
+          <Text style={styles.entryName}>
+            {item.awaitingWOrL ? `${item.awaitingWOrL}: ${item.awaiting?.p1?.name ?? 'TBD'} vs ${item.awaiting?.p2?.name ?? 'TBD'}` : 'Awaiting Opponent'}
+          </Text>
+          <Text style={styles.entryEvent}>{item.event?.name ?? 'Event TBD'}</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Round</Text>
+            <Text style={styles.detailValue}>{item.round ?? '—'}</Text>
           </View>
-        ))}
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Format</Text>
+            <Text style={styles.detailValue}>{item.contestFormat ?? '—'}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Deadline</Text>
+            <Text style={styles.detailValue}>{item.deadline ?? '—'}</Text>
+          </View>
+        </View>
+      ))}
+    </>
+  );
+
+  const renderAwaitingDraw = () => (
+    <>
+      <Text style={styles.sectionHeading}>Awaiting Draw</Text>
+      {awaitingDraw.map((item, index) => (
+        <View key={`${item.event?.id ?? index}-${index}`} style={styles.simpleCard}>
+          <Text style={styles.entryName}>{item.event?.name ?? 'Event TBD'}</Text>
+          <Text style={styles.entryEvent}>{item.bracket?.name ?? 'Bracket TBD'}</Text>
+          {item.event?.startTime && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Start Date</Text>
+              <Text style={styles.detailValue}>{item.event.startTime}</Text>
+            </View>
+          )}
+        </View>
+      ))}
+    </>
+  );
+
+  if (!token) {
+    return (
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <View style={[styles.container, styles.centerContent]}>
+          <Text style={styles.infoText}>Please sign in to view your current entries.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadEntries({ refresh: true })} />}
+      >
+        {loading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : error ? (
+          <View style={styles.centerContent}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadEntries()}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isEmpty ? (
+          <View style={styles.centerContent}>
+            <Text style={styles.infoText}>No current entries at the moment.</Text>
+          </View>
+        ) : (
+          <>
+            {awaitingResults.length > 0 && renderAwaitingResults()}
+            {awaitingOpponents.length > 0 && renderAwaitingOpponents()}
+            {awaitingDraw.length > 0 && renderAwaitingDraw()}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -277,6 +330,9 @@ const styles = StyleSheet.create({
   reportLoss: {
     backgroundColor: '#DA291C',
   },
+  reportAction: {
+    backgroundColor: '#1B365D',
+  },
   reportText: {
     ...theme.typography.caption,
     color: theme.colors.surface,
@@ -295,5 +351,33 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     gap: theme.spacing.sm,
+  },
+  centerContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing['4xl'],
+    gap: theme.spacing.lg,
+  },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.error,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing['2xl'],
+    borderRadius: theme.radius.md,
+  },
+  retryText: {
+    ...theme.typography.button,
+    color: theme.colors.surface,
+    fontWeight: '700',
+  },
+  infoText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
 });

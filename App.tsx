@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import * as Font from 'expo-font';
 import { Navigation } from './app/navigation';
+import { AuthProvider } from './app/context/AuthContext';
 import { clearABTCache } from './app/services/abtCalendarService';
 
 export default function App() {
@@ -56,7 +57,11 @@ export default function App() {
     );
   }
 
-  return <Navigation />;
+  return (
+    <AuthProvider>
+      <Navigation />
+    </AuthProvider>
+  );
 }
 
 const styles = StyleSheet.create({

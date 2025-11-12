@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
 import { getOnboardingSeen } from '../storage/flags';
+import { useAuth } from '../context/AuthContext';
 
 type SplashScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Splash'>;
 
@@ -13,18 +14,28 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
+  const { token, initializing } = useAuth();
+
   useEffect(() => {
+    if (initializing) {
+      return;
+    }
+
     const timer = setTimeout(async () => {
       try {
         const onboardingSeen = await getOnboardingSeen();
-        navigation.replace(onboardingSeen ? 'AuthStack' : 'Onboarding');
+        if (token) {
+          navigation.replace('MainApp');
+        } else {
+          navigation.replace(onboardingSeen ? 'AuthStack' : 'Onboarding');
+        }
       } catch (error) {
-        navigation.replace('Onboarding');
+        navigation.replace(token ? 'MainApp' : 'Onboarding');
       }
-    }, 2000);
+    }, 1200);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [navigation, token, initializing]);
 
   return (
     <SafeAreaView style={styles.container}>

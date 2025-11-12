@@ -14,6 +14,8 @@ import { RootStackParamList } from '../navigation';
 import { theme } from '../theme/tokens';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
+import { loginRequest } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 type SignInScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignIn'>;
 
@@ -22,6 +24,7 @@ interface SignInScreenProps {
 }
 
 export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -49,11 +52,23 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
     if (!validateForm()) return;
 
     setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await loginRequest(email.trim(), password);
+      if (!response.status || !response.data?.token) {
+        throw new Error(response.message || 'Unable to sign in');
+      }
+
+      await signIn(response.data.token, {
+        ...response.data.user,
+        username: response.data.user.username || email.trim(),
+      });
+
       navigation.replace('MainApp');
-    }, 1200);
+    } catch (error: any) {
+      Alert.alert('Sign In Failed', error?.message || 'Unable to sign in. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
