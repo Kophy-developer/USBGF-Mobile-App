@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useAuth } from '../context/AuthContext';
-import { fetchMatches, fetchBracketList, fetchBracketInfo, BracketNode } from '../services/api';
+import { fetchMatches, fetchBracketList, fetchBracketInfo, BracketNode, MatchSummary } from '../services/api';
 
 type FlattenedMatch = {
   contestId: number;
@@ -44,27 +44,22 @@ export const BracketsScreen: React.FC = () => {
       const [abt, online] = await Promise.all([fetchMatches(token, 5), fetchMatches(token, 2)]);
 
       const eventMap = new Map<number, EventSummary>();
-      const collect = (payload: any, clubId: number) => {
-        ['awaitingResults', 'awaitingOpponent', 'awaitingDraw'].forEach((key) => {
-          const list = payload?.[key];
-          if (Array.isArray(list)) {
-            list.forEach((item: any) => {
-              const event = item.event;
-              if (event?.id) {
-                eventMap.set(event.id, {
-                  id: event.id,
-                  name: event.name ?? `Event #${event.id}`,
-                  clubId,
-                  startTime: event.startTime,
-                });
-              }
+      const collect = (payload: MatchSummary[], clubId: number) => {
+        payload.forEach((match) => {
+          const event = match.event;
+          if (event?.id) {
+            eventMap.set(event.id, {
+              id: event.id,
+              name: event.name ?? `Event #${event.id}`,
+              clubId,
+              startTime: match.date,
             });
           }
         });
       };
 
-      collect(abt, 5);
-      collect(online, 2);
+      collect(Array.isArray(abt) ? abt : [], 5);
+      collect(Array.isArray(online) ? online : [], 2);
 
       setEvents(Array.from(eventMap.values()));
     } catch (err: any) {

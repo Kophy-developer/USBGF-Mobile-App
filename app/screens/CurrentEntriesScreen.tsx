@@ -13,11 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../context/AuthContext';
-import { fetchUpcomingMatches, MatchesPayload } from '../services/api';
+import { fetchUpcomingMatches, UpcomingMatchesPayload } from '../services/api';
 
 export const CurrentEntriesScreen: React.FC = () => {
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
-  const [matchesData, setMatchesData] = useState<MatchesPayload | null>(null);
+  const [matchesData, setMatchesData] = useState<UpcomingMatchesPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);

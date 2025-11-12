@@ -65,7 +65,11 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
       navigation.replace('MainApp');
     } catch (error: any) {
-      Alert.alert('Sign In Failed', error?.message || 'Unable to sign in. Please try again.');
+      const rawMessage = error?.message || 'Unable to sign in. Please try again.';
+      const humanMessage = /invalid|unauthorized|credential/i.test(rawMessage)
+        ? 'Wrong credentials'
+        : rawMessage;
+      Alert.alert('Sign In Failed', humanMessage);
     } finally {
       setIsLoading(false);
     }
