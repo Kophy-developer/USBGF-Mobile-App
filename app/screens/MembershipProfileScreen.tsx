@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { TextField } from '../components/TextField';
 import { Button } from '../components/Button';
 import { SelectField, SelectOption } from '../components/SelectField';
+import { useAuth } from '../context/AuthContext';
+import { fetchUserProfile, updateProfilePicture } from '../services/api';
 
 const COUNTRY_OPTIONS: SelectOption[] = [
   { label: 'United States', value: 'United States' },
@@ -80,24 +82,159 @@ const TIMEZONE_OPTIONS: SelectOption[] = [
   { label: 'Chamorro Time (CHST)', value: 'Chamorro Time (CHST)' },
 ];
 
+const STATE_ABBREVIATIONS: Record<string, string> = {
+  AL: 'Alabama',
+  AK: 'Alaska',
+  AZ: 'Arizona',
+  AR: 'Arkansas',
+  CA: 'California',
+  CO: 'Colorado',
+  CT: 'Connecticut',
+  DE: 'Delaware',
+  DC: 'District of Columbia',
+  FL: 'Florida',
+  GA: 'Georgia',
+  HI: 'Hawaii',
+  ID: 'Idaho',
+  IL: 'Illinois',
+  IN: 'Indiana',
+  IA: 'Iowa',
+  KS: 'Kansas',
+  KY: 'Kentucky',
+  LA: 'Louisiana',
+  ME: 'Maine',
+  MD: 'Maryland',
+  MA: 'Massachusetts',
+  MI: 'Michigan',
+  MN: 'Minnesota',
+  MS: 'Mississippi',
+  MO: 'Missouri',
+  MT: 'Montana',
+  NE: 'Nebraska',
+  NV: 'Nevada',
+  NH: 'New Hampshire',
+  NJ: 'New Jersey',
+  NM: 'New Mexico',
+  NY: 'New York',
+  NC: 'North Carolina',
+  ND: 'North Dakota',
+  OH: 'Ohio',
+  OK: 'Oklahoma',
+  OR: 'Oregon',
+  PA: 'Pennsylvania',
+  RI: 'Rhode Island',
+  SC: 'South Carolina',
+  SD: 'South Dakota',
+  TN: 'Tennessee',
+  TX: 'Texas',
+  UT: 'Utah',
+  VT: 'Vermont',
+  VA: 'Virginia',
+  WA: 'Washington',
+  WV: 'West Virginia',
+  WI: 'Wisconsin',
+  WY: 'Wyoming',
+};
+
 export const MembershipProfileScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [avatarUri, setAvatarUri] = React.useState<string | null>(null);
-  const [isEditing, setIsEditing] = React.useState(false);
+  const { token, user } = useAuth();
 
-  const [name, setName] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [phone, setPhone] = React.useState('');
-  const [stateRegion, setStateRegion] = React.useState('');
-  const [birthdate, setBirthdate] = React.useState('');
-  const [country, setCountry] = React.useState('United States');
-  const [timezone, setTimezone] = React.useState('');
-  const [membershipStatus, setMembershipStatus] = React.useState<'Active' | 'Expired' | 'Non-Member'>('Active');
-  const [membershipLevel, setMembershipLevel] = React.useState('Basic Monthly');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [stateRegion, setStateRegion] = useState('');
+  const [country, setCountry] = useState('United States');
+  const [timezone, setTimezone] = useState('');
+  const [membershipStatus, setMembershipStatus] = useState<'Active' | 'Expired' | 'Non-Member'>('Non-Member');
+  const [membershipLevel, setMembershipLevel] = useState('—');
+  const [accountCash, setAccountCash] = useState<number | null>(null);
+  const [accountCredits, setAccountCredits] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stateOptions, setStateOptions] = useState<SelectOption[]>(STATE_OPTIONS);
+  const [countryOptions, setCountryOptions] = useState<SelectOption[]>(COUNTRY_OPTIONS);
+  const [timezoneOptions, setTimezoneOptions] = useState<SelectOption[]>(TIMEZONE_OPTIONS);
+
+  const loadProfile = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const { userProfile = {}, userAccountInfo } = await fetchUserProfile(token, user?.playerId);
+      const account = userAccountInfo?.userAccount;
+
+      setName(userProfile.name || [userProfile.firstName, userProfile.lastName].filter(Boolean).join(' ') || '');
+      setEmail(userProfile.email || '');
+      setPhone(userProfile.phone || '');
+
+      const rawState = (userProfile.state ?? '').trim();
+      const normalizedState = rawState ? (STATE_ABBREVIATIONS[rawState.toUpperCase()] ?? rawState) : '';
+      if (normalizedState) {
+        setStateOptions((prev) =>
+          prev.some((option) => option.value === normalizedState)
+            ? prev
+            : [...prev, { label: normalizedState, value: normalizedState }]
+        );
+      }
+      setStateRegion(normalizedState);
+
+      const rawCountry = (userProfile.country ?? '').trim();
+      const normalizedCountry = rawCountry.toUpperCase() === 'US' ? 'United States' : rawCountry || 'United States';
+      if (normalizedCountry) {
+        setCountryOptions((prev) =>
+          prev.some((option) => option.value === normalizedCountry)
+            ? prev
+            : [...prev, { label: normalizedCountry, value: normalizedCountry }]
+        );
+      }
+      setCountry(normalizedCountry);
+
+      const rawTimezone = (userProfile.timezone ?? '').trim();
+      if (rawTimezone) {
+        setTimezoneOptions((prev) =>
+          prev.some((option) => option.value === rawTimezone)
+            ? prev
+            : [...prev, { label: rawTimezone, value: rawTimezone }]
+        );
+      }
+      setTimezone(rawTimezone || '');
+
+      setAvatarUri(userProfile.avatar || null);
+
+      setMembershipLevel(userProfile.memberType || '—');
+      const levelNumber = userProfile.memberLevel ?? 0;
+      setMembershipStatus(levelNumber > 0 ? 'Active' : 'Non-Member');
+
+      setAccountCash(typeof account?.cash === 'number' ? account.cash : null);
+      setAccountCredits(typeof account?.credits === 'number' ? account.credits : null);
+    } catch (err: any) {
+      setError(err?.message ?? 'Unable to load profile.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, user?.playerId]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handlePickImage = async () => {
+    if (avatarUploading) {
+      return;
+    }
+    if (!token) {
+      Alert.alert('Sign In Required', 'Please sign in to update your profile picture.');
+      return;
+    }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted && permission.status !== ImagePicker.PermissionStatus.LIMITED) {
+    if (permission.status !== ImagePicker.PermissionStatus.GRANTED && permission.status !== ImagePicker.PermissionStatus.LIMITED) {
       Alert.alert('Permission Required', 'Please allow photo library access to update your profile picture.');
       return;
     }
@@ -106,9 +243,51 @@ export const MembershipProfileScreen: React.FC = () => {
       quality: 0.8,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setAvatarUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      if (!asset.uri) {
+        return;
+      }
+      const previousAvatar = avatarUri;
+      const fileName = asset.fileName ?? asset.uri.split('/').pop() ?? `profile-${Date.now()}.jpg`;
+      const extension = fileName.split('.').pop()?.toLowerCase();
+      const derivedType =
+        asset.mimeType ??
+        (extension
+          ? extension === 'jpg' || extension === 'jpeg'
+            ? 'image/jpeg'
+            : `image/${extension}`
+          : 'image/jpeg');
+
+      setAvatarUri(asset.uri);
+      setAvatarUploading(true);
+      try {
+        const response = await updateProfilePicture(token, {
+          uri: asset.uri,
+          name: fileName,
+          type: derivedType || 'image/jpeg',
+        });
+        const remoteUrl =
+          response.data?.meta?.profile_picture_url ??
+          response.data?.urls?.['96'] ??
+          response.data?.urls?.['48'] ??
+          response.data?.urls?.['24'] ??
+          null;
+        if (remoteUrl) {
+          setAvatarUri(remoteUrl);
+        }
+        Alert.alert('Success', 'Profile picture updated successfully.');
+      } catch (err: any) {
+        setAvatarUri(previousAvatar ?? null);
+        Alert.alert('Upload Failed', err?.message ?? 'Unable to update profile picture.');
+      } finally {
+        setAvatarUploading(false);
+      }
     }
   };
+
+  const isAuthenticated = Boolean(token);
+  const formattedCash = useMemo(() => (accountCash != null ? `$${accountCash.toFixed(2)}` : '—'), [accountCash]);
+  const formattedCredits = useMemo(() => (accountCredits != null ? `$${accountCredits.toFixed(2)}` : '—'), [accountCredits]);
 
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
@@ -121,8 +300,18 @@ export const MembershipProfileScreen: React.FC = () => {
               ) : (
                 <Text style={styles.avatarEmoji}>👤</Text>
               )}
+              {avatarUploading && (
+                <View style={styles.avatarOverlay}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                </View>
+              )}
             </View>
-            <TouchableOpacity style={styles.editBadge} onPress={handlePickImage} accessibilityLabel="Edit profile image">
+            <TouchableOpacity
+              style={[styles.editBadge, avatarUploading && styles.editBadgeDisabled]}
+              onPress={handlePickImage}
+              accessibilityLabel="Edit profile image"
+              disabled={avatarUploading}
+            >
               <Text style={styles.editBadgeText}>✎</Text>
             </TouchableOpacity>
           </View>
@@ -130,12 +319,39 @@ export const MembershipProfileScreen: React.FC = () => {
             <TouchableOpacity style={styles.primaryButton} onPress={() => setIsEditing(true)}>
               <Text style={styles.primaryButtonText}>Edit Profile</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Dashboard' as any, { screen: 'AccountBalance' } as any)}>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('AccountBalance')}>
               <Text style={styles.primaryButtonText}>Account Balance</Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {!isAuthenticated && (
+          <View style={[styles.card, styles.centerContent]}>
+            <Text style={styles.infoText}>Please sign in to view your profile.</Text>
+          </View>
+        )}
+
+        {isAuthenticated && loading && (
+          <View style={[styles.card, styles.centerContent]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        )}
+
+        {isAuthenticated && !loading && error && (
+          <View style={[styles.card, styles.centerContent]}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Button
+              title="Retry"
+              variant="primary"
+              onPress={() => {
+                loadProfile();
+              }}
+            />
+          </View>
+        )}
+
+        {isAuthenticated && !loading && !error && (
+          <>
         {!isEditing && (
           <View style={styles.card}>
             <View style={styles.displayRow}><Text style={styles.displayLabel}>Name</Text><Text style={styles.displayValue}>{name || '—'}</Text></View>
@@ -145,8 +361,6 @@ export const MembershipProfileScreen: React.FC = () => {
             <View style={styles.displayRow}><Text style={styles.displayLabel}>Phone</Text><Text style={styles.displayValue}>{phone || '—'}</Text></View>
             <View style={styles.divider} />
             <View style={styles.displayRow}><Text style={styles.displayLabel}>State</Text><Text style={styles.displayValue}>{stateRegion || '—'}</Text></View>
-            <View style={styles.divider} />
-            <View style={styles.displayRow}><Text style={styles.displayLabel}>Birthdate</Text><Text style={styles.displayValue}>{birthdate || '—'}</Text></View>
             <View style={styles.divider} />
             <View style={styles.displayRow}><Text style={styles.displayLabel}>Country</Text><Text style={styles.displayValue}>{country || '—'}</Text></View>
             <View style={styles.divider} />
@@ -158,10 +372,9 @@ export const MembershipProfileScreen: React.FC = () => {
             <TextField label="Name" placeholder="Full name" value={name} onChangeText={setName} />
             <TextField label="Email" placeholder="email@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
             <TextField label="Phone" placeholder="Enter phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-            <SelectField label="State" value={stateRegion} onValueChange={setStateRegion} options={STATE_OPTIONS} placeholder="Select state" />
-            <TextField label="Birthdate" placeholder="YYYY-MM-DD" value={birthdate} onChangeText={setBirthdate} />
-            <SelectField label="Country" value={country} onValueChange={setCountry} options={COUNTRY_OPTIONS} placeholder="Select country" />
-            <SelectField label="Timezone" value={timezone} onValueChange={setTimezone} options={TIMEZONE_OPTIONS} placeholder="Select timezone" />
+            <SelectField label="State" value={stateRegion} onValueChange={setStateRegion} options={stateOptions} placeholder="Select state" />
+            <SelectField label="Country" value={country} onValueChange={setCountry} options={countryOptions} placeholder="Select country" />
+            <SelectField label="Timezone" value={timezone} onValueChange={setTimezone} options={timezoneOptions} placeholder="Select timezone" />
             <View style={styles.inlineChips}>
               <View style={[styles.badge, styles.badgeActive]}><Text style={styles.badgeText}>{membershipStatus}</Text></View>
               <View style={styles.badge}><Text style={styles.badgeText}>{membershipLevel}</Text></View>
@@ -184,10 +397,12 @@ export const MembershipProfileScreen: React.FC = () => {
         <View style={[styles.card, { marginTop: theme.spacing['2xl'] }]}> 
           <Text style={styles.displayLabel}>Account Balance</Text>
           <View style={styles.divider} />
-          <View style={styles.displayRow}><Text style={styles.displayLabel}>Cash</Text><Text style={styles.displayValue}>$10.00</Text></View>
+          <View style={styles.displayRow}><Text style={styles.displayLabel}>Cash</Text><Text style={styles.displayValue}>{formattedCash}</Text></View>
           <View style={styles.divider} />
-          <View style={styles.displayRow}><Text style={styles.displayLabel}>Credits</Text><Text style={styles.displayValue}>$0.00</Text></View>
+          <View style={styles.displayRow}><Text style={styles.displayLabel}>Credits</Text><Text style={styles.displayValue}>{formattedCredits}</Text></View>
         </View>
+          </>
+        )}
       </ScrollView>
 
     </SafeAreaView>
@@ -205,7 +420,18 @@ const styles = StyleSheet.create({
   avatarCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
   avatarEmoji: { fontSize: 48 },
+  avatarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   editBadge: { position: 'absolute', right: -2, bottom: -2, width: 36, height: 36, borderRadius: 18, backgroundColor: '#1B365D', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
+  editBadgeDisabled: { opacity: 0.5 },
   editBadgeText: { ...theme.typography.caption, color: '#FFFFFF', fontWeight: '800' },
   actionCol: { flex: 1, gap: theme.spacing.lg },
   primaryButton: { backgroundColor: '#1B365D', borderRadius: 12, paddingVertical: theme.spacing.md, alignItems: 'center' },
@@ -236,4 +462,14 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: '#E5E7EB', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 },
   badgeActive: { backgroundColor: '#16A34A' },
   badgeText: { color: '#111', fontWeight: '700' },
+  infoText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+  },
 });

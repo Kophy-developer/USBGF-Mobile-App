@@ -86,7 +86,7 @@ export const MembershipPlansScreen: React.FC = () => {
   }, [billing]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <View style={styles.toggleRow}>
         <Text style={[styles.toggleLabel, billing === 'annual' && styles.toggleLabelActive]}>Annual Recurring</Text>
         <TouchableOpacity
@@ -138,6 +138,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.surface,
+    paddingTop: ((theme.spacing.sm as number) ?? 0) + 18,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -146,12 +147,13 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     marginHorizontal: theme.spacing['3xl'],
     paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing['2xl'],
+    marginTop: Math.max((theme.spacing['2xl'] ?? 30) - 30, 0),
   },
   toggleLabel: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
     fontWeight: '700',
+    fontSize: ((theme.typography.caption as any)?.fontSize ?? 14) + 2,
   },
   toggleLabelActive: {
     color: theme.colors.textPrimary,
@@ -195,6 +197,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: theme.spacing['3xl'],
+    paddingTop: Math.max((theme.spacing['2xl'] ?? 30) - 30, 0),
     paddingBottom: theme.spacing['4xl'],
   },
   planCard: {

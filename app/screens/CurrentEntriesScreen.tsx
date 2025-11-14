@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../context/AuthContext';
-import { fetchUpcomingMatches, UpcomingMatchesPayload } from '../services/api';
+import { fetchUpcomingMatches, UpcomingMatchesPayload, reportMatchResult } from '../services/api';
 
 export const CurrentEntriesScreen: React.FC = () => {
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
@@ -23,23 +23,61 @@ export const CurrentEntriesScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { token, user } = useAuth();
 
-  const handleUploadReport = async (opponent: string) => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        copyToCacheDirectory: false,
-      });
-
-      if (result.type === 'success') {
-        Alert.alert('Report Uploaded', `${result.name} uploaded for ${opponent}`);
-      }
-    } catch (error) {
-      console.error('Report upload failed', error);
-      Alert.alert('Upload Failed', 'Unable to upload report. Please try again.');
-    }
-  };
-
   const toggleResult = (id: string) => {
     setExpandedResult((prev) => (prev === id ? null : id));
+  };
+
+  const handleReportMatch = async (item: any, outcome: 'WIN' | 'LOSS') => {
+    if (!token) {
+      Alert.alert('Sign in required', 'Please sign in to report a match.');
+      return;
+    }
+
+    const contestId: number | undefined = item?.contestId ?? item?.contest?.id;
+    const userFactContestantId: number | undefined =
+      item?.factContestantId ?? item?.contestantId ?? item?.entrantId;
+    const opponentFactContestantId: number | undefined = item?.opponent?.factContestantId;
+    const winnerFactContestantId =
+      outcome === 'WIN' ? userFactContestantId : opponentFactContestantId;
+
+    if (!contestId || !winnerFactContestantId) {
+      Alert.alert('Unable to report match', 'Missing match identifiers.');
+      return;
+    }
+
+    let matchFile:
+      | { uri: string; name: string; type?: string }
+      | undefined;
+
+    if (item?.actions?.isRequireMatchFile) {
+      const pickerResult = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: false,
+      });
+      if (pickerResult.type !== 'success') {
+        Alert.alert('Match file required', 'A match file is required to report this match.');
+        return;
+      }
+      matchFile = {
+        uri: pickerResult.uri,
+        name: pickerResult.name ?? `match-${contestId}.dat`,
+        type: pickerResult.mimeType ?? 'application/octet-stream',
+      };
+    }
+
+    try {
+      await reportMatchResult(token, {
+        contestId,
+        winnerFactContestantId,
+        matchFile,
+      });
+      Alert.alert(
+        'Match Reported',
+        outcome === 'WIN' ? 'Result submitted as a win.' : 'Result submitted as a loss.'
+      );
+      loadEntries({ refresh: true });
+    } catch (err: any) {
+      Alert.alert('Unable to report match', err?.message ?? 'Please try again later.');
+    }
   };
 
   const loadEntries = async (opts: { refresh?: boolean } = {}) => {
@@ -83,17 +121,13 @@ export const CurrentEntriesScreen: React.FC = () => {
       {awaitingResults.map((item, index) => {
         const id = `${item.contestId ?? item.opponent?.id ?? index}-${index}`;
         const isOpen = expandedResult === id;
-
-        const actionBadges: Array<{ label: string; onPress?: () => void }> = [];
-        if (item.actions?.isAllowReportMatch) {
-          actionBadges.push({ label: 'Report', onPress: () => handleUploadReport(item.opponent?.name ?? 'Opponent') });
-        }
-        if (item.actions?.isRequestMatchFile) {
-          actionBadges.push({ label: 'Match File', onPress: () => handleUploadReport(item.opponent?.name ?? 'Opponent') });
-        }
-        if (item.actions?.isAllowContactOpponent) {
-          actionBadges.push({ label: 'Contact' });
-        }
+        const canReportMatch =
+          item.actions?.isAllowReportMatch &&
+          item.contestId &&
+          ((item.factContestantId ?? item.contestantId ?? item.entrantId) ||
+            item.opponent?.factContestantId);
+        const requiresMatchFile = !!item.actions?.isRequireMatchFile;
+        const prefersMatchFile = !!item.actions?.isRequestMatchFile && !requiresMatchFile;
 
         return (
           <View key={id} style={styles.entryCard}>
@@ -118,23 +152,30 @@ export const CurrentEntriesScreen: React.FC = () => {
                   <Text style={styles.detailLabel}>Deadline</Text>
                   <Text style={styles.detailValue}>{item.deadline ?? '—'}</Text>
                 </View>
-                {actionBadges.length > 0 && (
+                {canReportMatch ? (
                   <View style={[styles.detailRow, styles.detailReport]}>
-                    <Text style={styles.detailLabel}>Actions</Text>
+                    <Text style={styles.detailLabel}>Report</Text>
                     <View style={styles.reportContainer}>
-                      {actionBadges.map((badge, idx) => (
-                        <TouchableOpacity
-                          key={`${badge.label}-${idx}`}
-                          style={[styles.reportBadge, styles.reportAction]}
-                          onPress={badge.onPress}
-                          disabled={!badge.onPress}
-                        >
-                          <Text style={styles.reportText}>{badge.label}</Text>
-                        </TouchableOpacity>
-                      ))}
+                      <TouchableOpacity
+                        style={[styles.reportBadge, styles.reportWin]}
+                        onPress={() => handleReportMatch(item, 'WIN')}
+                      >
+                        <Text style={styles.reportText}>W</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.reportBadge, styles.reportLoss]}
+                        onPress={() => handleReportMatch(item, 'LOSS')}
+                      >
+                        <Text style={styles.reportText}>L</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                )}
+                ) : null}
+                {requiresMatchFile ? (
+                  <Text style={styles.reportHint}>Match file required when reporting.</Text>
+                ) : prefersMatchFile ? (
+                  <Text style={styles.reportHint}>Match file preferred when reporting.</Text>
+                ) : null}
               </View>
             )}
           </View>
@@ -318,9 +359,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   reportBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+    minWidth: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -330,13 +371,15 @@ const styles = StyleSheet.create({
   reportLoss: {
     backgroundColor: '#DA291C',
   },
-  reportAction: {
-    backgroundColor: '#1B365D',
-  },
   reportText: {
     ...theme.typography.caption,
     color: theme.colors.surface,
     fontWeight: '700',
+  },
+  reportHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
   },
   simpleCard: {
     backgroundColor: theme.colors.surface,

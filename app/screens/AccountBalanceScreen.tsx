@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
@@ -7,22 +7,110 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
 import { TextField } from '../components/TextField';
 import { Button } from '../components/Button';
+import { useAuth } from '../context/AuthContext';
+import { fetchMemberTransactions, fetchUserProfile, MemberPressTransaction } from '../services/api';
 
 export const AccountBalanceScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [showAddFunds, setShowAddFunds] = React.useState(false);
-  const [amount, setAmount] = React.useState('99.50');
-  const [method, setMethod] = React.useState<'paypal' | 'credit' | 'card'>('paypal');
+  const { token, user } = useAuth();
+  const [showAddFunds, setShowAddFunds] = useState(false);
+  const [amount, setAmount] = useState('99.50');
+  const [method, setMethod] = useState<'paypal' | 'credit' | 'card'>('paypal');
+  const [cash, setCash] = useState<number | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<MemberPressTransaction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isAuthenticated = Boolean(token);
+
+  const loadData = async () => {
+    if (!token) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const profileData = await fetchUserProfile(token, user?.playerId);
+      const account = profileData.userAccountInfo?.userAccount;
+      setCash(typeof account?.cash === 'number' ? account.cash : null);
+      setCredits(typeof account?.credits === 'number' ? account.credits : null);
+
+      const memberId = user?.id ?? (typeof account?.userId === 'number' ? account.userId : undefined);
+      if (memberId) {
+        const tx = await fetchMemberTransactions(memberId);
+        setTransactions(
+          tx
+            .slice()
+            .sort((a, b) => {
+              const aTime = new Date((a.created_at ?? '').replace(' ', 'T')).getTime() || 0;
+              const bTime = new Date((b.created_at ?? '').replace(' ', 'T')).getTime() || 0;
+              return bTime - aTime;
+            })
+        );
+      } else {
+        setTransactions([]);
+      }
+    } catch (err: any) {
+      setError(err?.message ?? 'Unable to load account balance.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, user?.playerId, user?.id]);
+
+  const formattedCash = useMemo(() => (cash != null ? `$${cash.toFixed(2)}` : '—'), [cash]);
+  const formattedCredits = useMemo(() => (credits != null ? `$${credits.toFixed(2)}` : '—'), [credits]);
+
+  const renderAmountDelta = (transaction: MemberPressTransaction) => {
+    const amountValue = Number(transaction.amount ?? transaction.total ?? 0);
+    if (Number.isNaN(amountValue)) {
+      return transaction.amount ?? transaction.total ?? '—';
+    }
+    const sign = amountValue >= 0 ? '+' : '-';
+    return `${sign}$${Math.abs(amountValue).toFixed(2)}`;
+  };
+
+  const formatDate = (value?: string) => {
+    if (!value) return '—';
+    const parsed = new Date(value.replace(' ', 'T'));
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleDateString();
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container} edges={['left','right']}>
+        <View style={[styles.container, styles.centerContent]}>
+          <Text style={styles.infoText}>Please sign in to view your account balance.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {error ? (
+          <View style={styles.centerContent}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Button title="Retry" variant="primary" onPress={loadData} />
+          </View>
+        ) : (
+          <>
         <View style={styles.row}> 
           <Text style={styles.label}>Cash:</Text>
-          <Text style={styles.value}></Text>
+          <Text style={styles.value}>{formattedCash}</Text>
         </View>
         <View style={styles.row}> 
           <Text style={styles.label}>Credit:</Text>
-          <Text style={styles.value}></Text>
+          <Text style={styles.value}>{formattedCredits}</Text>
         </View>
 
         <View style={styles.addFundsContainer}>
@@ -33,17 +121,33 @@ export const AccountBalanceScreen: React.FC = () => {
 
         <Text style={styles.historyTitle}>Transaction History</Text>
 
+        {loading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : transactions.length === 0 ? (
+          <Text style={styles.infoText}>No transactions recorded yet.</Text>
+        ) : (
+          <>
         <View style={styles.tableHeader}> 
           <Text style={[styles.th, styles.colDate]}>Date</Text>
           <Text style={[styles.th, styles.colDelta]}>+ / -</Text>
           <Text style={[styles.th, styles.colBalance]}>Balance</Text>
         </View>
 
-        <View style={styles.tableRow}> 
-          <Text style={[styles.td, styles.colDate]}>10/14/2025</Text>
-          <Text style={[styles.td, styles.colDelta]}>+$30</Text>
-          <Text style={[styles.td, styles.colBalance]}>$40</Text>
-        </View>
+        {transactions.map((transaction) => (
+          <View key={transaction.id} style={styles.tableRow}> 
+            <Text style={[styles.td, styles.colDate]}>{formatDate(transaction.created_at)}</Text>
+            <Text style={[styles.td, styles.colDelta]}>{renderAmountDelta(transaction)}</Text>
+            <Text style={[styles.td, styles.colBalance]}>
+              {transaction.total ? `$${Number(transaction.total).toFixed(2)}` : '—'}
+            </Text>
+          </View>
+        ))}
+          </>
+        )}
+          </>
+        )}
       </ScrollView>
       <Modal visible={showAddFunds} animationType="fade" transparent>
         <View style={styles.modalBackdrop}>
@@ -167,6 +271,22 @@ const styles = StyleSheet.create({
   colDate: { flex: 2 },
   colDelta: { flex: 1, textAlign: 'center' as const },
   colBalance: { flex: 1, textAlign: 'right' as const },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing['2xl'],
+  },
+  infoText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.error,
+    textAlign: 'center',
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -207,7 +327,8 @@ const styles = StyleSheet.create({
   methodSelected: {
     backgroundColor: '#1B365D',
   },
-  methodText: { ...theme.typography.body,
+  methodText: {
+    ...theme.typography.body,
     color: '#111',
     fontWeight: '600',
   },

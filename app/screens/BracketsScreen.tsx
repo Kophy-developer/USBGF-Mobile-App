@@ -19,6 +19,26 @@ type EventSummary = {
   startTime?: string;
 };
 
+const parseEventDate = (value?: string): number => {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const normalized = value.replace(/-/g, ' ');
+  const parsed = new Date(normalized).getTime();
+  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+};
+
+const formatEventDate = (value?: string) => {
+  if (!value) return null;
+  const timestamp = parseEventDate(value);
+  if (!Number.isFinite(timestamp)) return value;
+  return new Date(timestamp).toLocaleDateString();
+};
+
+const getClubLabel = (clubId?: number) => {
+  if (clubId === 5) return 'ABT Events';
+  if (clubId === 2) return 'Online Events';
+  return `Club ${clubId ?? '—'}`;
+};
+
 export const BracketsScreen: React.FC = () => {
   const { token } = useAuth();
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -61,7 +81,10 @@ export const BracketsScreen: React.FC = () => {
       collect(Array.isArray(abt) ? abt : [], 5);
       collect(Array.isArray(online) ? online : [], 2);
 
-      setEvents(Array.from(eventMap.values()));
+      const sortedEvents = Array.from(eventMap.values()).sort(
+        (a, b) => parseEventDate(a.startTime) - parseEventDate(b.startTime)
+      );
+      setEvents(sortedEvents);
     } catch (err: any) {
       setEventError(err?.message || 'Unable to load events.');
       setEvents([]);
@@ -208,8 +231,10 @@ export const BracketsScreen: React.FC = () => {
             }}
           >
             <Text style={styles.eventName}>{event.name}</Text>
-            {event.startTime && <Text style={styles.eventMeta}>Starts: {event.startTime}</Text>}
-            <Text style={styles.eventMeta}>Club: {event.clubId ?? '—'}</Text>
+            {formatEventDate(event.startTime) && (
+              <Text style={styles.eventMeta}>Starts: {formatEventDate(event.startTime)}</Text>
+            )}
+            <Text style={styles.eventMeta}>{getClubLabel(event.clubId)}</Text>
           </TouchableOpacity>
         ))}
       </>
@@ -251,27 +276,48 @@ export const BracketsScreen: React.FC = () => {
       return (
         <View key={bracket.id} style={styles.bracketCard}>
           <Text style={styles.bracketTitle}>{bracket.name}</Text>
-          {grouped.map((group) => (
-            <View key={group.round} style={styles.roundBlock}>
-              <Text style={styles.roundTitle}>Round {group.round}</Text>
-              {group.matches.map((match) => (
-                <View key={match.contestId} style={styles.matchRow}>
-                  {match.contestants.map((contestant, idx) => (
+          {grouped.map((group, groupIndex) => {
+            const nextRoundLabel =
+              groupIndex === grouped.length - 1 ? 'Champion' : `Round ${group.round + 1}`;
+            return (
+              <View key={group.round} style={styles.roundBlock}>
+                <View style={styles.roundHeader}>
+                  <View style={styles.roundIndicator}>
+                    <Text style={styles.roundIndicatorText}>{group.round}</Text>
+                  </View>
+                  <Text style={styles.roundTitle}>Round {group.round}</Text>
+                </View>
+                {group.matches.map((match) => (
+                  <View key={match.contestId} style={styles.matchCard}>
+                    <Text style={styles.matchLabel}>{match.label}</Text>
+                    {match.contestants.map((contestant, idx) => (
                     <View
                       key={idx}
-                      style={[styles.contestantBadge, contestant.isWinner && styles.contestantWinner]}
+                      style={[
+                        styles.contestantRow,
+                        contestant.isWinner && styles.contestantRowWinner,
+                      ]}
                     >
                       <Text
-                        style={[styles.contestantText, contestant.isWinner && styles.contestantTextWinner]}
+                        style={[
+                          styles.contestantName,
+                          contestant.isWinner && styles.contestantNameWinner,
+                        ]}
                       >
                         {contestant.name}
                       </Text>
+                      {contestant.isWinner ? (
+                        <View style={styles.advanceBadge}>
+                          <Text style={styles.advanceBadgeText}>Advances to {nextRoundLabel}</Text>
+                        </View>
+                      ) : null}
                     </View>
-                  ))}
-                </View>
-              ))}
-            </View>
-          ))}
+                    ))}
+                  </View>
+                ))}
+              </View>
+            );
+          })}
         </View>
       );
     });
@@ -407,36 +453,83 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   roundBlock: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: theme.spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: '#CBD5F5',
+    paddingLeft: theme.spacing.lg,
+    marginLeft: theme.spacing.sm,
     gap: theme.spacing.sm,
+  },
+  roundHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  roundIndicator: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#1B365D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roundIndicatorText: {
+    ...theme.typography.caption,
+    color: theme.colors.surface,
+    fontWeight: '700',
   },
   roundTitle: {
     ...theme.typography.body,
     fontWeight: '700',
-    color: theme.colors.textSecondary,
-  },
-  matchRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    flexWrap: 'wrap',
-  },
-  contestantBadge: {
-    backgroundColor: '#E5E7EB',
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: theme.spacing.md,
-  },
-  contestantWinner: {
-    backgroundColor: '#1A9E55',
-  },
-  contestantText: {
-    ...theme.typography.caption,
     color: theme.colors.textPrimary,
   },
-  contestantTextWinner: {
-    color: '#FFFFFF',
+  matchCard: {
+    backgroundColor: '#F4F6FB',
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    gap: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  matchLabel: {
+    ...theme.typography.caption,
+    color: '#4F46E5',
+    fontWeight: '700',
+    marginBottom: theme.spacing.xs,
+  },
+  contestantRow: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: theme.spacing.xs,
+  },
+  contestantRowWinner: {
+    borderColor: '#1A9E55',
+    backgroundColor: '#ECFDF3',
+  },
+  contestantName: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+  },
+  contestantNameWinner: {
+    fontWeight: '700',
+    color: '#047857',
+  },
+  advanceBadge: {
+    backgroundColor: '#1A9E55',
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+  },
+  advanceBadgeText: {
+    ...theme.typography.caption,
+    color: theme.colors.surface,
+    fontWeight: '700',
   },
 });
 

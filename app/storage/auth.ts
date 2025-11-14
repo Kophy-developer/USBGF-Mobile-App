@@ -33,3 +33,5 @@ export async function clearAuthStorage(): Promise<void> {
   await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
 }
 
+
+

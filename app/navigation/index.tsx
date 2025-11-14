@@ -28,6 +28,8 @@ import { StatsScreen } from '../screens/StatsScreen';
 import { BracketsScreen } from '../screens/BracketsScreen';
 import {   ABTCalendarScreen } from '../screens/ABTCalendarScreen';
 import { CurrentEntriesScreen } from '../screens/CurrentEntriesScreen';
+import { EventDetailsScreen } from '../screens/EventDetailsScreen';
+import type { EventSummary } from '../services/api';
 
 export type AuthStackParamList = {
   SignIn: undefined;
@@ -48,6 +50,7 @@ export type RootStackParamList = {
   AuthStack: undefined;
   MainApp: undefined;
   Events: undefined;
+  EventDetails: { eventId: number; eventName?: string; clubId?: number; status?: 'ACCEPTING' | 'IN_PROGRESS' | 'COMPLETED'; initialEvent?: EventSummary | null };
   MembershipProfile: undefined;
   AccountBalance: undefined;
   MembershipPlans: undefined;
@@ -138,6 +141,11 @@ const HomeStackNavigator: React.FC = () => {
         options={{ headerShown: false }}
       />
       <HomeStack.Screen name="Events" component={EventsScreen} />
+      <HomeStack.Screen 
+        name="EventDetails" 
+        component={EventDetailsScreen}
+        options={{ title: 'Event Details' }}
+      />
       <HomeStack.Screen name="Registration" component={RegistrationScreen} />
       <HomeStack.Screen
         name="AccountBalance"
@@ -328,7 +336,8 @@ export const Navigation: React.FC = () => {
           <Stack.Screen name="AuthStack" component={AuthStackNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="MainApp" component={MainTabNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="Events" component={EventsScreen} />
-          <Stack.Screen name="AccountBalance" component={AccountBalanceScreen} />
+        <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
+          <Stack.Screen name="AccountBalance" component={AccountBalanceScreen} options={{ title: 'Account Balance' }} />
           <Stack.Screen name="MembershipPlans" component={MembershipPlansScreen} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />
