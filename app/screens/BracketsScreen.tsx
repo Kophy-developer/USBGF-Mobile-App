@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme/tokens';
 import { useAuth } from '../context/AuthContext';
+import { BracketSvg, BracketSvgRound } from '../components/BracketSvg';
 import {
   fetchBracketList,
   fetchBracketInfo,
@@ -192,8 +193,39 @@ export const BracketsScreen: React.FC = () => {
     return rounds;
   }, []);
 
+  const roundsToSvg = useCallback((rounds: BracketRound[]): BracketSvgRound[] => {
+    // For correct bracket progression, we want earliest rounds first (most matches) and finals last (1 match).
+    // Backend roundOfPlay ordering is not guaranteed, so order by match count desc (classic single elim).
+    const ordered = rounds
+      .slice()
+      .sort((a, b) => {
+        const d = (b.matches?.length ?? 0) - (a.matches?.length ?? 0);
+        if (d !== 0) return d;
+        // fallback: stable-ish by name
+        return (a.name ?? '').localeCompare(b.name ?? '');
+      });
+
+    return ordered.map((r, idx) => ({
+      key: `${idx}-${r.name}`,
+      matches: (r.matches ?? []).map((m) => {
+        const aName = m.players?.[0] ?? 'TBD';
+        const bName = m.players?.[1] ?? 'TBD';
+        const winner =
+          m.winner && m.winner === aName ? 'A' : m.winner && m.winner === bName ? 'B' : null;
+        return {
+          id: m.id,
+          aName,
+          bName,
+          aScore: null,
+          bScore: null,
+          winner,
+        };
+      }),
+    }));
+  }, []);
+
   const loadBrackets = useCallback(
-    async (event: EventSummary, selectedFilter: 'all' | 'remaining' | 'final') => {
+    async (event: EventSummary, selectedFilter: 'all' | 'final') => {
       if (!token) {
         return;
       }
@@ -207,8 +239,9 @@ export const BracketsScreen: React.FC = () => {
           return;
         }
 
-        const fromRoundParam =
-          selectedFilter === 'remaining' ? 0 : selectedFilter === 'final' ? -3 : undefined;
+        // For "All Rounds" we do NOT pass `fromRound` at all (backend returns full tree).
+        // We only pass `fromRound=-3` when the user selects "Final 3".
+        const fromRoundParam = selectedFilter === 'final' ? -3 : undefined;
 
         const infos = await Promise.all(
           list.map((bracket) =>
@@ -226,8 +259,21 @@ export const BracketsScreen: React.FC = () => {
         }));
 
         setBrackets(parsed);
-        if (parsed.length > 0 && !selectedBracketId) {
-          setSelectedBracketId(parsed[0].id);
+        // Default selection: prefer the "Main" bracket if present; otherwise fall back to first.
+        // This makes the Brackets screen usable without forcing the user to pick each time.
+        if (parsed.length > 0) {
+          const main =
+            parsed.find((b) => /(^|\s)main(\s|$)/i.test(b.name ?? '')) ??
+            parsed.find((b) => /main/i.test(b.name ?? ''));
+          const defaultId = (main ?? parsed[0]).id;
+
+          // If nothing selected yet OR previously selected bracket no longer exists, apply default.
+          const stillExists = selectedBracketId
+            ? parsed.some((b) => b.id === selectedBracketId)
+            : false;
+          if (!selectedBracketId || !stillExists) {
+            setSelectedBracketId(defaultId);
+          }
         }
       } catch (err: any) {
         setBracketError(err?.message || 'Unable to load bracket information.');
@@ -302,6 +348,8 @@ export const BracketsScreen: React.FC = () => {
             onPress={() => {
               setSelectedEvent(event);
               setFilter('all');
+              // Reset bracket selection so we default to "Main" for the newly selected event.
+              setSelectedBracketId(null);
             }}
           >
             <Text style={styles.eventName}>{event.name}</Text>
@@ -345,138 +393,12 @@ export const BracketsScreen: React.FC = () => {
       );
     }
 
-    const PLAYER_BOX_HEIGHT = 50;
-    const GAP_BETWEEN_PLAYERS = 8;
-    const MATCH_HEIGHT = PLAYER_BOX_HEIGHT * 2 + GAP_BETWEEN_PLAYERS;
-    const VERTICAL_SPACING_BETWEEN_MATCHES = 40;
-    const HORIZONTAL_ROUND_SPACING = 100;
-    const CONNECTOR_WIDTH = 40;
+    const svgRounds = roundsToSvg(bracketRounds);
 
     return (
       <View style={styles.bracketContainer}>
         <Text style={styles.bracketTitle}>{selectedBracket.name}</Text>
-        
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.bracketScrollContent}
-        >
-          <View style={{ flexDirection: 'row' }}>
-            {bracketRounds.map((round, roundIndex) => {
-              const isLastRound = roundIndex === bracketRounds.length - 1;
-              
-              return (
-                <View key={roundIndex} style={{ marginRight: isLastRound ? 0 : HORIZONTAL_ROUND_SPACING }}>
-                  <View style={styles.roundHeaderBox}>
-                    <Ionicons name="trophy" size={20} color="#1B365D" />
-                    <Text style={styles.roundHeaderText}>{round.name}</Text>
-                  </View>
-
-                  <View style={{ marginTop: 20, position: 'relative' }}>
-                    {round.matches.map((match, matchIndex) => {
-                      const player1 = match.players[0];
-                      const player2 = match.players[1];
-                      const isPlayer1Winner = player1 === match.winner;
-                      const isPlayer2Winner = player2 === match.winner;
-
-                      // Calculate vertical spacing: each subsequent round should center between pairs
-                      const verticalMultiplier = Math.pow(2, roundIndex);
-                      const baseSpacing = MATCH_HEIGHT + VERTICAL_SPACING_BETWEEN_MATCHES;
-                      const topPosition = matchIndex * verticalMultiplier * baseSpacing + 
-                                         (verticalMultiplier - 1) * baseSpacing / 2;
-
-                      // Calculate center Y position of this match for connector drawing
-                      const matchCenterY = topPosition + MATCH_HEIGHT / 2;
-
-                      return (
-                        <View key={match.id}>
-                          {/* Draw connectors from previous round if not first round */}
-                          {roundIndex > 0 && (
-                            <View style={{ position: 'absolute', top: topPosition, left: -CONNECTOR_WIDTH }}>
-                              {/* Horizontal line from left connecting to this match */}
-                              <View 
-                                style={{
-                                  position: 'absolute',
-                                  top: MATCH_HEIGHT / 2,
-                                  left: 0,
-                                  width: CONNECTOR_WIDTH,
-                                  height: 2,
-                                  backgroundColor: '#1B365D',
-                                }}
-                              />
-                              
-                              {/* Vertical line connecting two matches from previous round */}
-                              {matchIndex * 2 + 1 < bracketRounds[roundIndex - 1].matches.length && (
-                                <>
-                                  <View 
-                                    style={{
-                                      position: 'absolute',
-                                      top: -verticalMultiplier * baseSpacing / 2 + MATCH_HEIGHT / 2,
-                                      left: 0,
-                                      width: 2,
-                                      height: verticalMultiplier * baseSpacing,
-                                      backgroundColor: '#1B365D',
-                                    }}
-                                  />
-                                </>
-                              )}
-                            </View>
-                          )}
-
-                          {/* Match container with players */}
-                          <View 
-                            style={{
-                              position: 'absolute',
-                              top: topPosition,
-                              left: 0,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {/* Player boxes */}
-                            <View style={{ gap: GAP_BETWEEN_PLAYERS }}>
-                              <View
-                                style={[
-                                  styles.playerBox,
-                                  isPlayer1Winner ? styles.playerBoxWinner : styles.playerBoxLoser,
-                                ]}
-                              >
-                                <Text style={styles.playerNameText}>{player1 || 'TBD'}</Text>
-                              </View>
-
-                              <View
-                                style={[
-                                  styles.playerBox,
-                                  isPlayer2Winner ? styles.playerBoxWinner : styles.playerBoxLoser,
-                                ]}
-                              >
-                                <Text style={styles.playerNameText}>{player2 || 'TBD'}</Text>
-                              </View>
-                            </View>
-
-                            {/* Horizontal connector line extending to the right (except for last round) */}
-                            {!isLastRound && (
-                              <View 
-                                style={{
-                                  width: CONNECTOR_WIDTH,
-                                  height: 2,
-                                  backgroundColor: '#1B365D',
-                                  position: 'absolute',
-                                  left: 180,
-                                  top: MATCH_HEIGHT / 2,
-                                }}
-                              />
-                            )}
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </ScrollView>
+        <BracketSvg rounds={svgRounds} />
       </View>
     );
   };
@@ -710,32 +632,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
     fontFamily: theme.typography.heading.fontFamily,
-  },
-  playerBox: {
-    width: 180,
-    borderRadius: theme.radius.sm,
-    padding: theme.spacing.sm,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  playerBoxWinner: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#1B365D',
-    borderWidth: 2,
-  },
-  playerBoxLoser: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-  },
-  playerNameText: {
-    ...theme.typography.body,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    fontWeight: '600',
-    textAlign: 'center',
-    fontFamily: theme.typography.body.fontFamily,
   },
   eventTypeOption: {
     paddingVertical: theme.spacing.lg,

@@ -507,8 +507,13 @@ export const MatchesScreen: React.FC = () => {
       .sort((a, b) => {
         const tA = matchSortValue(a);
         const tB = matchSortValue(b);
-        if (tA !== tB) return tB - tA;
-        return (b.contestId ?? b.matchId ?? 0) - (a.contestId ?? a.matchId ?? 0);
+        // For Online matches, sort ascending (earliest first); for ABT, sort descending (latest first)
+        if (tA !== tB) {
+          return viewType === 'ONLINE' ? tA - tB : tB - tA;
+        }
+        return viewType === 'ONLINE' 
+          ? (a.contestId ?? a.matchId ?? 0) - (b.contestId ?? b.matchId ?? 0)
+          : (b.contestId ?? b.matchId ?? 0) - (a.contestId ?? a.matchId ?? 0);
       });
     
     // Filter out locally reported matches (they'll show with un-report button instead)

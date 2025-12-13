@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import * as Font from 'expo-font';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Navigation } from './app/navigation';
 import { AuthProvider } from './app/context/AuthContext';
 import { clearABTCache } from './app/services/abtCalendarService';
@@ -58,13 +59,18 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <Navigation />
-    </AuthProvider>
+    <GestureHandlerRootView style={styles.gestureRoot}>
+      <AuthProvider>
+        <Navigation />
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
