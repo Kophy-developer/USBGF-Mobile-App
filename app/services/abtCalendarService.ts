@@ -1,119 +1,48 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 export interface ABTEvent {
   id: string;
-  dateRange: string;
-  title: string;
+  dateRange: string; // e.g., "04 - 07" or "4th to 7th"
+  dateRangeFull: string; // e.g., "4th to 7th December, 2025"
+  title: string; // e.g., "2025 California State Championship"
   location: string;
   month: string;
   year: string;
+  monthAbbr: string; // e.g., "DEC"
+  dayStart: number; // e.g., 4
+  dayEnd: number; // e.g., 7
 }
 
 const ABT_CALENDAR_URL = 'https://usbgf.org/abt-calendar/';
-const CACHE_KEY = 'abt_calendar_events';
-const CACHE_TIMESTAMP_KEY = 'abt_calendar_timestamp';
 
-let inMemoryEvents: ABTEvent[] | null = null;
 let isFetching = false;
 
-const SEED_EVENTS: ABTEvent[] = [
-  {
-    id: 'event-1-nov-2025',
-    dateRange: '18 - 24 Nov',
-    title: '2025 Miami Open Backgammon Championship (ABT)',
-    location: 'Tuesday, Newport Beachside Hotel & Resort',
-    month: 'November',
-    year: '2025',
-  },
-  {
-    id: 'event-2-dec-2025',
-    dateRange: '04 - 07 Dec',
-    title: '2025 California State Championships (ABT)',
-    location: 'Thursday, Hilton Los Angeles Airport',
-    month: 'December',
-    year: '2025',
-  },
-  {
-    id: 'event-3-jan-2026',
-    dateRange: '15 - 19 Jan',
-    title: '2026 New York Metropolitan Open',
-    location: 'Thursday, Hyatt Regency on the Hudson',
-    month: 'January',
-    year: '2026',
-  },
-  {
-    id: 'event-4-feb-2026',
-    dateRange: '04 - 08 Feb',
-    title: '2026 Texas Backgammon Championships',
-    location: 'Wednesday, Gunter Hotel',
-    month: 'February',
-    year: '2026',
-  },
-  {
-    id: 'event-5-feb-2026-2',
-    dateRange: '26 Feb - 01 Mar',
-    title: '2026 Atlanta Classic',
-    location: 'Thursday, Kimpton Overland Hotel - Atlanta Airport',
-    month: 'February',
-    year: '2026',
-  },
-  {
-    id: 'event-6-mar-2026',
-    dateRange: '26 - 29 Mar',
-    title: '2026 Ohio State Championships',
-    location: 'Thursday, Holiday Inn Canton (Belden Village) by IHG',
-    month: 'March',
-    year: '2026',
-  },
-  {
-    id: 'event-7-apr-2026',
-    dateRange: '15 - 19 Apr',
-    title: '2026 Cherry Blossom Championship (ABT)',
-    location: 'Wednesday, Hyatt Regency at Dulles Airport',
-    month: 'April',
-    year: '2026',
-  },
-  {
-    id: 'event-8-apr-2026-2',
-    dateRange: '30 Apr - 03 May',
-    title: '2026 Charlotte Backgammon Invitational',
-    location: 'Thursday, Hilton Charlotte University Place',
-    month: 'April',
-    year: '2026',
-  },
-  {
-    id: 'event-9-may-2026',
-    dateRange: '20 - 25 May',
-    title: '2026 Chicago Open',
-    location: 'Wednesday, Embassy Suites O\'Hare Rosemont',
-    month: 'May',
-    year: '2026',
-  },
-  {
-    id: 'event-10-jun-2026',
-    dateRange: '17 - 21 Jun',
-    title: '2026 St. Louis Gateway Open',
-    location: 'Wednesday, Holiday Inn St. Louis Airport West-Earth City',
-    month: 'June',
-    year: '2026',
-  },
-  {
-    id: 'event-11-jul-2026',
-    dateRange: '01 - 05 Jul',
-    title: '2026 Michigan Summer Championships',
-    location: 'Wednesday, Sheraton Detroit Novi Hotel',
-    month: 'July',
-    year: '2026',
-  },
-  {
-    id: 'event-12-aug-2026',
-    dateRange: '05 - 09 Aug',
-    title: '2026 Wisconsin State Backgammon Championships',
-    location: 'Wednesday, Best Western Plus InnTowner Madison',
-    month: 'August',
-    year: '2026',
-  },
-];
+// No seed events - we always fetch fresh data from the website
+
+// Helper function to get ordinal number (1st, 2nd, 3rd, 4th, etc.)
+function getOrdinalSuffix(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  const suffix = s[(v - 20) % 10] || s[v] || s[0];
+  return `${n}${suffix}`;
+}
+
+// Helper function to get month abbreviation
+function getMonthAbbr(month: string): string {
+  const months: { [key: string]: string } = {
+    'January': 'JAN',
+    'February': 'FEB',
+    'March': 'MAR',
+    'April': 'APR',
+    'May': 'MAY',
+    'June': 'JUN',
+    'July': 'JUL',
+    'August': 'AUG',
+    'September': 'SEP',
+    'October': 'OCT',
+    'November': 'NOV',
+    'December': 'DEC',
+  };
+  return months[month] || month.substring(0, 3).toUpperCase();
+}
 
 export function parseABTEventsFromHTML(html: string): ABTEvent[] {
   const events: ABTEvent[] = [];
@@ -122,12 +51,16 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
     const cleanHtml = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
                           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
     
+    // Pattern to find month/year headers
     const monthYearPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/gi;
-    const dateRangePattern = /(\d{1,2}\s*[-–—]\s*\d{1,2}\s+[A-Z]{3}|\d{1,2}\s+[A-Z]{3})/gi;
     
-    const monthSections: Array<{ month: string; year: string; index: number }> = [];
+    // Pattern to find date ranges like "04 - 07" or "4 - 7" followed by month abbreviation
+    const dateRangePattern = /(\d{1,2})\s*[-–—]\s*(\d{1,2})\s+([A-Z]{3})/gi;
+    
+    const monthSections: Array< { month: string; year: string; index: number }> = [];
     let match;
     
+    // Find all month sections
     while ((match = monthYearPattern.exec(cleanHtml)) !== null) {
       monthSections.push({
         month: match[1],
@@ -144,27 +77,37 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
       
       const sectionHtml = cleanHtml.substring(startIndex, endIndex);
       
-      const dateMatches: Array<{ dateRange: string; index: number }> = [];
+      // Find all date ranges in this section
+      const dateMatches: Array<{ dayStart: number; dayEnd: number; monthAbbr: string; index: number }> = [];
       let dateMatch;
       const localDatePattern = new RegExp(dateRangePattern.source, 'gi');
       
       while ((dateMatch = localDatePattern.exec(sectionHtml)) !== null) {
+        // Check if the month abbreviation matches
+        const expectedAbbr = getMonthAbbr(monthSection.month);
+        if (dateMatch[3].toUpperCase() === expectedAbbr) {
         dateMatches.push({
-          dateRange: dateMatch[1].trim(),
+            dayStart: parseInt(dateMatch[1], 10),
+            dayEnd: parseInt(dateMatch[2], 10),
+            monthAbbr: dateMatch[3].toUpperCase(),
           index: dateMatch.index,
         });
+        }
       }
       
       dateMatches.forEach((dateMatch) => {
+        // Extract content after the date range
         const afterDate = sectionHtml.substring(
-          dateMatch.index + dateMatch.dateRange.length,
-          dateMatch.index + dateMatch.dateRange.length + 500
+          dateMatch.index + 100, // Look further after the date
+          dateMatch.index + 800
         );
         
+        // Try multiple patterns to find the title
         const titlePatterns = [
-          /####\s*([^<]+?)(?:<|EVENT DETAIL|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)/i,
-          /<h[34][^>]*>([^<]+?)<\/h[34]>/i,
-          />\s*([A-Z][^<]{15,120}?)(?:<|EVENT DETAIL|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)/i,
+          /<h[234][^>]*>([^<]+?)<\/h[234]>/i,
+          /<strong[^>]*>([^<]+?)<\/strong>/i,
+          /<b[^>]*>([^<]+?)<\/b>/i,
+          />\s*([A-Z][^<]{20,150}?)(?:<|EVENT DETAIL|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)/,
         ];
         
         let title = '';
@@ -173,39 +116,55 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
           if (titleMatch && titleMatch[1]) {
             title = titleMatch[1].trim()
               .replace(/\s+/g, ' ')
-              .replace(/[<>####]/g, '')
+              .replace(/[<>]/g, '')
               .trim();
-            if (title.length > 10) break;
+            
+            // Filter out invalid titles
+            if (title.length > 15 && 
+                !title.toUpperCase().includes('EVENT DETAIL') && 
+                !title.toUpperCase().includes('ABT CALENDAR') &&
+                !title.match(/^[A-Z\s]{3,}$/)) { // Not all caps short text
+              break;
+          }
+            title = '';
           }
         }
         
-        const locationPattern = /(?:Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)[,\s]+([^<]{10,80}?)(?:,|$|\.|<|EVENT)/i;
+        // Extract location (day of week + venue)
+        const locationPattern = /(?:Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)[,\s]+([^<]{10,100}?)(?:,|$|\.|<|EVENT|AM|PM)/i;
         const locationMatch = afterDate.match(locationPattern);
         const location = locationMatch ? locationMatch[1].trim() : '';
         
-        if (title && title.length > 10 && location && location.length > 5) {
-          if (!title.toUpperCase().includes('EVENT DETAIL') && 
-              !title.toUpperCase().includes('DETAIL') &&
-              title.length > 15) {
+        if (title && title.length > 15 && location && location.length > 5) {
+          // Create formatted date range
+          const dateRange = `${dateMatch.dayStart.toString().padStart(2, '0')} - ${dateMatch.dayEnd.toString().padStart(2, '0')}`;
+          const dateRangeFull = `${getOrdinalSuffix(dateMatch.dayStart)} to ${getOrdinalSuffix(dateMatch.dayEnd)} ${monthSection.month}, ${monthSection.year}`;
+          
             events.push({
-              id: `event-${events.length}-${monthSection.month}-${monthSection.year}`,
-              dateRange: dateMatch.dateRange,
+            id: `event-${events.length}-${monthSection.month}-${monthSection.year}-${dateMatch.dayStart}`,
+            dateRange,
+            dateRangeFull,
               title,
               location,
               month: monthSection.month,
               year: monthSection.year,
+            monthAbbr: dateMatch.monthAbbr,
+            dayStart: dateMatch.dayStart,
+            dayEnd: dateMatch.dayEnd,
             });
-          }
         }
       });
     });
     
+    // Sort events chronologically
     events.sort((a, b) => {
       const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                           'July', 'August', 'September', 'October', 'November', 'December'];
       const yearDiff = parseInt(a.year) - parseInt(b.year);
       if (yearDiff !== 0) return yearDiff;
-      return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+      const monthDiff = monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+      if (monthDiff !== 0) return monthDiff;
+      return a.dayStart - b.dayStart;
     });
     
     return events;
@@ -215,118 +174,31 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
   }
 }
 
-export async function fetchABTEventsDirect(): Promise<ABTEvent[]> {
+/**
+ * Fetch ABT events using WebView scraper (handles lazy loading)
+ * This always fetches fresh data - no caching
+ */
+export async function fetchABTEvents(): Promise<ABTEvent[]> {
   if (isFetching) {
-    return [];
-  }
-  
-  isFetching = true;
-  try {
-    const response = await fetch(ABT_CALENDAR_URL, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Cache-Control': 'max-age=0',
-      },
+    // If already fetching, wait for it
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (!isFetching) {
+          clearInterval(checkInterval);
+          resolve([]);
+        }
+      }, 500);
     });
+}
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const html = await response.text();
-    const events = parseABTEventsFromHTML(html);
-    
-    if (events.length > 0) {
-      setInMemoryEvents(events);
-      await cacheEvents(events);
-      return events;
-    }
-    
-    return SEED_EVENTS;
-  } catch (error) {
-    console.error('Direct fetch failed:', error);
-    return SEED_EVENTS;
-  } finally {
-    isFetching = false;
+  // Note: This function is meant to be used with the WebView scraper
+  // The actual scraping is handled in ABTCalendarScreen using the scraper service
+  return [];
   }
-}
 
-export function setInMemoryEvents(events: ABTEvent[]): void {
-  inMemoryEvents = events;
-}
-
-export function getInMemoryEvents(): ABTEvent[] | null {
-  return inMemoryEvents;
-}
-
-export function clearInMemoryCache(): void {
-  inMemoryEvents = null;
-}
-
-export async function clearABTCache(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(CACHE_KEY);
-    await AsyncStorage.removeItem(CACHE_TIMESTAMP_KEY);
-    inMemoryEvents = null;
-  } catch (error) {
-    console.error('Error clearing ABT cache:', error);
-  }
-}
-
-export async function getCachedEvents(): Promise<ABTEvent[] | null> {
-  try {
-    const cached = await AsyncStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const events = JSON.parse(cached);
-      setInMemoryEvents(events);
-      return events;
-    }
-    setInMemoryEvents(SEED_EVENTS);
-    await cacheEvents(SEED_EVENTS);
-    return SEED_EVENTS;
-  } catch (error) {
-    console.error('Error getting cached events:', error);
-    setInMemoryEvents(SEED_EVENTS);
-    return SEED_EVENTS;
-  }
-}
-
-export async function cacheEvents(events: ABTEvent[]): Promise<void> {
-  try {
-    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(events));
-    await AsyncStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-  } catch (error) {
-    console.error('Error caching events:', error);
-  }
-}
-
-export async function getABTEvents(forceRefresh: boolean = false): Promise<ABTEvent[]> {
-  if (!forceRefresh) {
-    const memoryEvents = getInMemoryEvents();
-    if (memoryEvents && memoryEvents.length > 0) {
-      return memoryEvents;
-    }
-    
-    const cachedEvents = await getCachedEvents();
-    if (cachedEvents && cachedEvents.length > 0) {
-      return cachedEvents;
-    }
-  }
-  
-  try {
-    const events = await fetchABTEventsDirect();
-    return events;
-  } catch (error) {
-    console.error('Failed to fetch events:', error);
-    return SEED_EVENTS;
-  }
+/**
+ * Clear any in-memory cache (for consistency, though we don't cache)
+ */
+export function clearABTCache(): void {
+  // No-op since we don't cache anymore
 }

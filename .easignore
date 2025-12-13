@@ -4,12 +4,22 @@ Thumbs.db
 *.log
 expo.log
 
+# Ignore npm and package manager caches
+.npm-cache/
+.npm/
+.yarn/
+.pnp/
+.cache/
+
 # Ignore temporary build artifacts
 web-dist/
 
 # Ignore platform native projects (Managed workflow regenerates these)
 android/
 ios/
+
+# Ignore node_modules (installed during build)
+node_modules/
 
 # Ignore local Library directory
 Library/
@@ -18,9 +28,17 @@ Library/
 release.keystore.b64
 keystore.jks
 
-# Ignore node_modules caches (actual dependencies installed during build)
-node_modules/.cache/
+# Ignore large documentation and test files
+*.md
+README.md
+
+# Ignore Postman API collection (not needed for build)
+USBGF postman_api endpoints.json
+
+# Ignore utility scripts
+clear-onboarding.js
 
 # Default ignored directories
 .git
+.gitignore
 

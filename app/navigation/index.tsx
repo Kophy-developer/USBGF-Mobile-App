@@ -12,11 +12,12 @@ import { OnboardingCarousel } from '../screens/OnboardingCarousel';
 import { SignInScreen } from '../screens/SignInScreen';
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 import { LegalWebview } from '../screens/LegalWebview';
-import { HomePlaceholderScreen } from '../screens/HomePlaceholderScreen';
 
 import { MainDashboardScreen } from '../screens/MainDashboardScreen';
 import { MessagesScreen } from '../screens/MessagesScreen';
 import { EventsScreen } from '../screens/EventsScreen';
+import { ABTEventsScreen } from '../screens/ABTEventsScreen';
+import { OnlineEventsScreen } from '../screens/OnlineEventsScreen';
 import { MatchesScreen } from '../screens/MatchesScreen';
 import { MembershipProfileScreen } from '../screens/MembershipProfileScreen';
 import { AccountBalanceScreen } from '../screens/AccountBalanceScreen';
@@ -24,12 +25,16 @@ import { MembershipPlansScreen } from '../screens/MembershipPlansScreen';
 import { RegistrationScreen } from '../screens/RegistrationScreen';
 import { PaymentScreen } from '../screens/PaymentScreen';
 import { ContactScreen } from '../screens/ContactScreen';
+import { OpponentProfileScreen } from '../screens/OpponentProfileScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { BracketsScreen } from '../screens/BracketsScreen';
 import {   ABTCalendarScreen } from '../screens/ABTCalendarScreen';
+import { ABTCalendarEventDetailScreen } from '../screens/ABTCalendarEventDetailScreen';
+import { ScheduleScreen } from '../screens/ScheduleScreen';
+import { ScheduleDetailScreen } from '../screens/ScheduleDetailScreen';
 import { CurrentEntriesScreen } from '../screens/CurrentEntriesScreen';
 import { EventDetailsScreen } from '../screens/EventDetailsScreen';
-import type { EventSummary } from '../services/api';
+import type { CalendarEvent, EventSummary } from '../services/api';
 
 export type AuthStackParamList = {
   SignIn: undefined;
@@ -56,15 +61,21 @@ export type RootStackParamList = {
   MembershipPlans: undefined;
   Registration: undefined;
   Payment: { planKey: string; billing: 'annual' | 'monthly' };
-  Contact: { name: string; message: string };
+  Contact: { name: string; message?: string; playerId?: number | string; email?: string; messageId?: number };
+  OpponentProfile: { playerId: number | string; playerName?: string };
   ABTCalendar: undefined;
+  ABTCalendarEvent: { event: CalendarEvent };
+  Schedule: undefined;
+  ScheduleDetail: { event: CalendarEvent };
   CurrentEntries?: undefined;
+  Matches: { viewType?: 'ABT' | 'ONLINE' };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const HomeStack = createStackNavigator();
+const ScheduleStack = createStackNavigator();
 
 const BackButton: React.FC<{ onPress: () => void }> = ({ onPress }) => (
   <TouchableOpacity
@@ -133,6 +144,12 @@ const HomeStackNavigator: React.FC = () => {
           canGoBack ? (
             <BackButton onPress={() => navigation.goBack()} />
           ) : null,
+        contentStyle: {
+          backgroundColor: '#FFFFFF', // Ensure all screens in HomeStack have white background
+        },
+        cardStyle: {
+          backgroundColor: '#FFFFFF', // Ensure card style is white
+        },
       })}
     >
       <HomeStack.Screen 
@@ -141,6 +158,16 @@ const HomeStackNavigator: React.FC = () => {
         options={{ headerShown: false }}
       />
       <HomeStack.Screen name="Events" component={EventsScreen} />
+      <HomeStack.Screen
+        name="ABTEvents"
+        component={ABTEventsScreen}
+        options={{ title: 'ABT Events' }}
+      />
+      <HomeStack.Screen
+        name="OnlineEvents"
+        component={OnlineEventsScreen}
+        options={{ title: 'Online Events' }}
+      />
       <HomeStack.Screen 
         name="EventDetails" 
         component={EventDetailsScreen}
@@ -160,21 +187,80 @@ const HomeStackNavigator: React.FC = () => {
       <HomeStack.Screen 
         name="Payment" 
         component={PaymentScreen}
-        options={{ headerLeft: () => null }}
+        options={{ title: 'Payment' }}
       />
       <HomeStack.Screen name="Stats" component={StatsScreen} />
       <HomeStack.Screen name="Brackets" component={BracketsScreen} />
       <HomeStack.Screen
         name="CurrentEntries"
         component={CurrentEntriesScreen}
-        options={{ title: 'Current Entries' }}
+        options={{ title: 'Current Matches' }}
       />
       <HomeStack.Screen 
         name="ABTCalendar" 
         component={ABTCalendarScreen}
         options={{ headerShown: false }}
       />
+      <HomeStack.Screen 
+        name="ABTCalendarEvent" 
+        component={ABTCalendarEventDetailScreen}
+        options={{ title: 'Event Detail' }}
+      />
+      <HomeStack.Screen
+        name="Schedule"
+        component={ScheduleScreen}
+        options={{ title: 'Schedule' }}
+      />
+      <HomeStack.Screen
+        name="ScheduleDetail"
+        component={ScheduleDetailScreen}
+        options={{ title: 'Schedule' }}
+      />
     </HomeStack.Navigator>
+  );
+};
+
+const ScheduleStackNavigator: React.FC = () => {
+  return (
+    <ScheduleStack.Navigator
+      screenOptions={({ navigation }) => ({
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: '#1B365D',
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontFamily: 'DunbarTall-Regular',
+          fontSize: 20,
+          fontWeight: '600',
+          color: '#FFFFFF',
+        },
+        headerBackTitleVisible: false,
+        gestureEnabled: true,
+        headerLeft: ({ canGoBack }) =>
+          canGoBack ? <BackButton onPress={() => navigation.goBack()} /> : null,
+        contentStyle: {
+          backgroundColor: '#FFFFFF',
+        },
+      })}
+    >
+      <ScheduleStack.Screen
+        name="ScheduleMain"
+        component={ScheduleScreen}
+        options={({ navigation }) => ({
+          title: 'Schedule',
+          headerLeft: () => <BackButton onPress={() => navigation.goBack()} />,
+        })}
+      />
+      <ScheduleStack.Screen
+        name="ScheduleDetail"
+        component={ScheduleDetailScreen}
+        options={({ navigation }) => ({
+          title: 'Schedule',
+          headerLeft: () => <BackButton onPress={() => navigation.goBack()} />,
+        })}
+      />
+    </ScheduleStack.Navigator>
   );
 };
 
@@ -201,6 +287,12 @@ const MainTabNavigator: React.FC = () => {
           canGoBack ? (
             <BackButton onPress={() => navigation.goBack()} />
           ) : null,
+        sceneStyle: {
+          backgroundColor: '#FFFFFF', // Explicitly set white background for all tab screens
+        },
+        contentStyle: {
+          backgroundColor: '#FFFFFF', // Ensure content area is white
+        },
         tabBarStyle: {
           position: 'absolute',
           left: 16,
@@ -241,6 +333,9 @@ const MainTabNavigator: React.FC = () => {
               <Text style={{ fontSize: 22, color, marginBottom: -2 }}>🌐</Text>
             ),
             headerShown: false,
+            sceneStyle: {
+              backgroundColor: '#FFFFFF', // Explicitly set white for Dashboard tab
+            },
           }}
       />
       <Tab.Screen 
@@ -293,7 +388,19 @@ const MainTabNavigator: React.FC = () => {
 export const Navigation: React.FC = () => {
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
+      <NavigationContainer
+        theme={{
+          dark: false,
+          colors: {
+            primary: '#1B365D',
+            background: '#FFFFFF',
+            card: '#FFFFFF',
+            text: '#111111',
+            border: '#E5E5E5',
+            notification: '#DC2626',
+          },
+        }}
+      >
         <StatusBar style="light" backgroundColor="#1A1A2E" />
         <Stack.Navigator
           initialRouteName="Splash"
@@ -336,13 +443,15 @@ export const Navigation: React.FC = () => {
           <Stack.Screen name="AuthStack" component={AuthStackNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="MainApp" component={MainTabNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="Events" component={EventsScreen} />
+          <Stack.Screen name="ABTEvents" component={ABTEventsScreen} />
+          <Stack.Screen name="OnlineEvents" component={OnlineEventsScreen} />
         <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
           <Stack.Screen name="AccountBalance" component={AccountBalanceScreen} options={{ title: 'Account Balance' }} />
           <Stack.Screen name="MembershipPlans" component={MembershipPlansScreen} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />
+          <Stack.Screen name="OpponentProfile" component={OpponentProfileScreen} options={{ title: 'Opponent Profile' }} />
           <Stack.Screen name="Registration" component={RegistrationScreen} />
-          <Stack.Screen name="HomePlaceholder" component={HomePlaceholderScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

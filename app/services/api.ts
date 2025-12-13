@@ -19,7 +19,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
         message = parsed.error.message;
       }
     } catch (e) {
-      // text was not JSON, keep original message
     }
     throw new Error(message);
   }
@@ -29,8 +28,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function apiRequest<T = any>(path: string, options: ApiOptions = {}): Promise<T> {
   const { token, headers, ...rest } = options;
 
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
   const response = await fetch(`${BASE_URL}${path}`, {
     credentials: 'include',
+        signal: controller.signal,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -39,7 +44,25 @@ export async function apiRequest<T = any>(path: string, options: ApiOptions = {}
     ...rest,
   });
 
+      clearTimeout(timeoutId);
   return handleResponse<T>(response);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Request timed out. Please check your internet connection and try again.');
+      }
+      throw fetchError;
+    }
+  } catch (error: any) {
+    const errorMessage = error?.message?.toLowerCase() || '';
+    if (errorMessage.includes('network request failed') || 
+        errorMessage.includes('failed to fetch') ||
+        errorMessage.includes('networkerror') ||
+        errorMessage.includes('typeerror')) {
+      throw new Error('Network request failed. Please check your internet connection and try again.');
+    }
+    throw error;
+  }
 }
 
 async function memberPressRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -61,7 +84,6 @@ async function memberPressRequest<T>(path: string, options: RequestInit = {}): P
         message = parsed.message;
       }
     } catch (e) {
-      // ignore
     }
     throw new Error(message);
   }
@@ -140,9 +162,16 @@ export interface MatchesListResponse {
 }
 
 export async function fetchMatches(token: string, clubId: number): Promise<MatchSummary[]> {
-  const response = await apiRequest<MatchesListResponse>(`/matches?clubId=${clubId}&periodId=${PERIOD_ID}`, {
+  const url = `/matches?clubId=${clubId}&periodId=${PERIOD_ID}`;
+  console.log(`[API] Fetching matches from: ${BASE_URL}${url}`);
+  const response = await apiRequest<MatchesListResponse>(url, {
     method: 'GET',
     token,
+  });
+  console.log(`[API] Matches response:`, { 
+    status: response.status, 
+    dataLength: Array.isArray(response.data) ? response.data.length : 'not array',
+    message: response.message 
   });
   return response.data ?? [];
 }
@@ -156,9 +185,16 @@ export async function fetchUpcomingMatches(token: string, params: { clubId?: num
     searchParams.append('playerId', String(params.playerId));
   }
   const query = searchParams.toString();
-  const response = await apiRequest<UpcomingMatchesResponse>(`/matches/upcoming${query ? `?${query}` : ''}`, {
+  const url = `/matches/upcoming${query ? `?${query}` : ''}`;
+  console.log(`[API] Fetching upcoming matches from: ${BASE_URL}${url}`);
+  const response = await apiRequest<UpcomingMatchesResponse>(url, {
     method: 'GET',
     token,
+  });
+  console.log(`[API] Upcoming matches response:`, { 
+    status: response.status, 
+    message: response.message,
+    dataKeys: response.data ? Object.keys(response.data) : 'no data'
   });
   return response.data;
 }
@@ -171,6 +207,7 @@ export interface EventSummary {
   skill?: number;
   entry?: number;
   position?: number;
+  userIsEntered?: boolean;
   start?: string;
   end?: string;
   tournament?: {
@@ -198,11 +235,17 @@ export interface EventsResponse {
   data: EventsPayload;
 }
 
-export async function fetchEvents(token: string, params: { clubId: number; playerId?: number; page?: number; limit?: number }): Promise<EventsPayload> {
+export async function fetchEvents(token: string, params: { clubId: number; playerId?: number; player?: number; tab?: string; page?: number; limit?: number }): Promise<EventsPayload> {
   const searchParams = new URLSearchParams();
   searchParams.append('clubId', String(params.clubId));
   if (typeof params.playerId === 'number' && !Number.isNaN(params.playerId)) {
     searchParams.append('playerId', String(params.playerId));
+  }
+  if (typeof params.player === 'number' && !Number.isNaN(params.player)) {
+    searchParams.append('player', String(params.player));
+  }
+  if (params.tab && typeof params.tab === 'string') {
+    searchParams.append('tab', params.tab);
   }
   if (typeof params.page === 'number') {
     searchParams.append('page', String(params.page));
@@ -294,6 +337,40 @@ export async function fetchEventDetails(token: string, eventId: number): Promise
   return response.data;
 }
 
+// ABT Calendar (public)
+export interface CalendarEvent {
+  id: number;
+  post_id: number;
+  title: string;
+  description: string;
+  start: string;
+  end: string;
+  start_time?: string;
+  end_time?: string;
+  featured_image: string | false;
+  categories: string[];
+}
+
+export interface CalendarResponse {
+  message: string;
+  status: boolean;
+  statusCode: number;
+  data: {
+    page: number;
+    per_page: number;
+    count: number;
+    events: CalendarEvent[];
+  };
+  error: any;
+}
+
+export async function fetchABTCalendar(page = 1): Promise<CalendarEvent[]> {
+  const response = await apiRequest<CalendarResponse>(`/general/calendar?page=${page}`, {
+    method: 'GET',
+  });
+  return response?.data?.events ?? [];
+}
+
 export interface EnterEventResponse {
   message: string;
   status: boolean;
@@ -364,9 +441,13 @@ export interface UserProfileResponse {
   message: string;
   status: boolean;
   statusCode: number;
-  data: {
-    userProfile: UserProfileData;
+  data: UserProfileData & {
     userAccountInfo?: UserAccountInfo;
+    avatar?: {
+      full?: string;
+      thumb?: string;
+      is_default?: boolean;
+    };
   };
   error?: any;
 }
@@ -401,6 +482,51 @@ export async function fetchMemberTransactions(memberId: number): Promise<MemberP
   return memberPressRequest<MemberPressTransaction[]>(`/transactions?member=${memberId}`);
 }
 
+export interface UserTransaction {
+  id?: number | string;
+  timestamp?: string;
+  date?: string;
+  created_at?: string;
+  description?: string;
+  cashAmount?: number | string;
+  creditsAmount?: number | string;
+  newCashBalance?: number | string;
+  newCreditsBalance?: number | string;
+  amount?: number | string;
+  total?: number | string;
+  balance?: number | string;
+  status?: string;
+  txn_type?: string;
+  trans_num?: string;
+  updatedBy?: string;
+  [key: string]: any;
+}
+
+export interface UserTransactionsResponse {
+  message?: string;
+  status?: boolean;
+  statusCode?: number;
+  data?: UserTransaction[];
+  error?: any;
+}
+
+export async function fetchUserTransactions(
+  token: string,
+  userAccountId: number
+): Promise<UserTransaction[]> {
+  if (!userAccountId) {
+    return [];
+  }
+  const response = await apiRequest<UserTransactionsResponse>(
+    `/user/transactions/${userAccountId}`,
+    {
+      method: 'GET',
+      token,
+    }
+  );
+  return Array.isArray(response.data) ? response.data : [];
+}
+
 export interface UserStatsPeriod {
   id: number;
   LastEloRating?: number;
@@ -430,10 +556,13 @@ export interface UserStatsResponse {
   error?: any;
 }
 
-export async function fetchUserStats(token: string, playerId?: number): Promise<UserStatsPayload> {
+export async function fetchUserStats(token: string, playerId?: number, clubId?: number): Promise<UserStatsPayload> {
   const searchParams = new URLSearchParams();
   if (typeof playerId === 'number') {
     searchParams.append('playerId', String(playerId));
+  }
+  if (typeof clubId === 'number') {
+    searchParams.append('clubId', String(clubId));
   }
   const query = searchParams.toString();
   const response = await apiRequest<UserStatsResponse>(`/user/stats${query ? `?${query}` : ''}`, {
@@ -446,30 +575,15 @@ export async function fetchUserStats(token: string, playerId?: number): Promise<
 export interface ReportMatchResultParams {
   contestId: number;
   winnerFactContestantId: number;
-  matchFile?: {
-    uri: string;
-    name: string;
-    type?: string;
-  };
 }
 
 export async function reportMatchResult(
   token: string,
-  { contestId, winnerFactContestantId, matchFile }: ReportMatchResultParams
+  { contestId, winnerFactContestantId }: ReportMatchResultParams
 ): Promise<any> {
   const formData = new FormData();
   formData.append('contestId', String(contestId));
   formData.append('winnerFactContestantIds', String(winnerFactContestantId));
-  if (matchFile) {
-    formData.append(
-      'matchFiles',
-      {
-        uri: matchFile.uri,
-        name: matchFile.name,
-        type: matchFile.type ?? 'application/octet-stream',
-      } as any
-    );
-  }
 
   const response = await fetch(`${BASE_URL}/events/match/report-match`, {
     method: 'POST',
@@ -480,25 +594,73 @@ export async function reportMatchResult(
     body: formData,
   });
 
-  if (!response.ok) {
+  // Try to parse the response even if status is not ok
+  let responseData: any = null;
+  try {
     const text = await response.text();
-    let message = text || `Request failed with status ${response.status}`;
-    try {
-      const parsed = JSON.parse(text);
-      if (parsed?.message) {
-        message = parsed.message;
+    if (text) {
+      try {
+        responseData = JSON.parse(text);
+      } catch (e) {
+        // If not JSON, responseData remains null
+      }
       }
     } catch (e) {
-      // ignore non-JSON responses
-    }
-    throw new Error(message);
+    // Ignore parsing errors
   }
 
-  try {
-    return await response.json();
-  } catch (e) {
-    return null;
+  // If response is successful (2xx), ensure backend status is true; otherwise throw
+  if (response.ok || (response.status >= 200 && response.status < 300)) {
+    // Some endpoints return {status:boolean,message:string}
+    if (responseData && responseData.status === false) {
+      throw new Error(responseData.message || 'Unable to report match.');
   }
+    // If no response body, treat as error to avoid false positives
+    if (!responseData) {
+      throw new Error('No response from server while reporting match.');
+    }
+    return responseData;
+  }
+
+  // For non-success status codes, check if the error is about match files
+  // If it is, we still treat it as success since match files are no longer required
+  if (responseData?.message) {
+    const errorMessage = String(responseData.message).toLowerCase();
+    const isMatchFileError = 
+      errorMessage.includes('match file') ||
+      errorMessage.includes('matchfile') ||
+      errorMessage.includes('file required') ||
+      errorMessage.includes('file is required') ||
+      errorMessage.includes('match file needed') ||
+      errorMessage.includes('match file required');
+    
+    if (isMatchFileError) {
+      // Match was reported successfully, just ignore the match file warning
+      return responseData;
+  }
+  }
+
+  // For other errors, throw normally
+  const errorMessage = responseData?.message || `Request failed with status ${response.status}`;
+  throw new Error(errorMessage);
+}
+
+export interface UnreportMatchParams {
+  entrantId: number | string;
+}
+
+export async function unreportMatch(
+  token: string,
+  { entrantId }: UnreportMatchParams
+): Promise<any> {
+  const response = await apiRequest<any>('/events/match/report-match', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      entrantId: String(entrantId),
+    }),
+  });
+  return response;
 }
 
 export interface ProfilePictureResponse {
@@ -514,6 +676,46 @@ export interface ProfilePictureResponse {
     [key: string]: any;
   };
   error?: any;
+}
+
+export interface UpdateProfileRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  mobile_phone?: string;
+  state?: string;
+  country?: string;
+  timezone?: string;
+}
+
+export interface UpdateProfileResponse {
+  message: string;
+  status: boolean;
+  statusCode: number;
+  data?: {
+    id?: number;
+    email?: string;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+    display_name?: string;
+    state?: string;
+    country?: string;
+    mobile_phone?: string;
+    [key: string]: any;
+  };
+  error?: any;
+}
+
+export async function updateProfile(
+  token: string,
+  data: UpdateProfileRequest
+): Promise<UpdateProfileResponse> {
+  return await apiRequest<UpdateProfileResponse>('/user/profile', {
+    method: 'PUT',
+    token,
+    body: JSON.stringify(data),
+  });
 }
 
 export async function updateProfilePicture(
@@ -578,4 +780,268 @@ export async function fetchBracketInfo(token: string, bracketId: number, fromRou
 }
 
 export const MATCHES_PERIOD_ID = PERIOD_ID;
+
+export interface Message {
+  id?: string | number;
+  content?: string;
+  sender?: number | string;
+  receiver?: number | string;
+  participant?: number | string;
+  timestamp?: string;
+  created_at?: string;
+  [key: string]: any;
+}
+
+export interface SendMessageRequest {
+  content: string;
+  receiver: string | number; // playerID
+}
+
+export interface SendMessageResponse {
+  message?: string;
+  status?: boolean;
+  statusCode?: number;
+  data?: any;
+  error?: any;
+}
+
+export interface MessagesResponse {
+  message?: string;
+  status?: boolean;
+  statusCode?: number;
+  data?: Message[];
+  error?: any;
+}
+
+export interface Contact {
+  id?: number | string;
+  playerId?: number | string;
+  name?: string;
+  avatar?: string;
+  [key: string]: any;
+}
+
+export interface ContactsResponse {
+  message?: string;
+  status?: boolean;
+  statusCode?: number;
+  data?: Contact[];
+  error?: any;
+}
+
+export async function sendMessage(
+  token: string,
+  { content, receiver }: SendMessageRequest
+): Promise<SendMessageResponse> {
+  try {
+    return await apiRequest<SendMessageResponse>('/message/send', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ 
+        content: String(content).trim(), 
+        receiver: String(receiver) 
+      }),
+    });
+  } catch (error: any) {
+    const errorMessage = error?.message?.toLowerCase() || '';
+    if (errorMessage.includes('retries')) {
+      throw new Error('Server connection issue. Please try again in a moment.');
+    }
+    if (errorMessage.includes('unauthorized') || errorMessage.includes('token')) {
+      throw new Error('Please sign in again to send messages.');
+    }
+    if (errorMessage.includes('receiver') || errorMessage.includes('invalid')) {
+      throw new Error('Invalid recipient. Please check the contact information.');
+    }
+    throw error;
+  }
+}
+
+export async function fetchMessages(
+  token: string,
+  participantId: number | string
+): Promise<Message[]> {
+  try {
+    const response = await apiRequest<MessagesResponse>(
+      `/message/messages?participant=${participantId}`,
+      {
+        method: 'GET',
+        token,
+      }
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    const errorMessage = error?.message?.toLowerCase() || '';
+    if (
+      errorMessage.includes('retries') ||
+      errorMessage.includes('not found') ||
+      errorMessage.includes('no messages') ||
+      errorMessage.includes('empty')
+    ) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function fetchContacts(token: string): Promise<Contact[]> {
+  const response = await apiRequest<ContactsResponse>('/message/contacts', {
+    method: 'GET',
+    token,
+  });
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+// New messaging API interfaces and functions
+export interface MessageThread {
+  message_id: number;
+  current_user: number;
+  recipients: Array<{
+    id: number;
+    user_id: number;
+    username: string;
+    avatar: {
+      full: string;
+      thumb: string;
+    };
+  }>;
+  last_message: {
+    message: string;
+    date: string;
+    sender: {
+      sender_name: string;
+      user_avatars: {
+        full: string;
+        thumb: string;
+      };
+    };
+    display_date: string;
+  };
+  all_messages: any;
+}
+
+export interface AllMessagesResponse {
+  message: string;
+  status: boolean;
+  statusCode: number;
+  data: MessageThread[];
+  error?: any;
+}
+
+export interface MessageDetailResponse {
+  message: string;
+  status: boolean;
+  statusCode: number;
+  data: {
+    message_id: number;
+    current_user: number;
+    recipients: Array<{
+      id: number;
+      user_id: number;
+      username: string;
+      avatar: {
+        full: string;
+        thumb: string;
+      };
+    }>;
+    last_message: {
+      message: string;
+      date: string;
+      sender: {
+        sender_name: string;
+        user_avatars: {
+          full: string;
+          thumb: string;
+        };
+      };
+      display_date: string;
+    };
+    all_messages: Array<{
+      message: string;
+      date: string;
+      sender: {
+        sender_name: string;
+        user_avatars: {
+          full: string;
+          thumb: string;
+        };
+      };
+      display_date: string;
+    }>;
+  };
+  error?: any;
+}
+
+export interface SendMessageNewRequest {
+  content: string;
+  receiver: string | number; // playerID
+  receiverUsername: string; // email
+}
+
+/**
+ * Get all message threads for the logged-in user
+ */
+export async function fetchAllMessages(token: string): Promise<MessageThread[]> {
+  try {
+    const response = await apiRequest<AllMessagesResponse>('/message/messages', {
+      method: 'GET',
+      token,
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    const errorMessage = error?.message?.toLowerCase() || '';
+    if (
+      errorMessage.includes('retries') ||
+      errorMessage.includes('not found') ||
+      errorMessage.includes('no messages') ||
+      errorMessage.includes('empty')
+    ) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get message details by messageId
+ */
+export async function fetchMessageDetails(token: string, messageId: number): Promise<MessageDetailResponse['data']> {
+  const response = await apiRequest<MessageDetailResponse>(`/message/messages/${messageId}`, {
+    method: 'GET',
+    token,
+  });
+  return response.data;
+}
+
+/**
+ * Send a message using the new endpoint format
+ */
+export async function sendMessageNew(
+  token: string,
+  { content, receiver, receiverUsername }: SendMessageNewRequest
+): Promise<SendMessageResponse> {
+  try {
+    return await apiRequest<SendMessageResponse>('/message/send', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ 
+        content: String(content).trim(), 
+        receiver: String(receiver),
+        receiverUsername: String(receiverUsername),
+      }),
+    });
+  } catch (error: any) {
+    const errorMessage = error?.message?.toLowerCase() || '';
+    if (errorMessage.includes('retries')) {
+      throw new Error('Server connection issue. Please try again in a moment.');
+    }
+    if (errorMessage.includes('unauthorized') || errorMessage.includes('token')) {
+      throw new Error('Please sign in again to send messages.');
+    }
+    if (errorMessage.includes('receiver') || errorMessage.includes('invalid')) {
+      throw new Error('Invalid recipient. Please check the contact information.');
+    }
+    throw error;
+  }
+}
 

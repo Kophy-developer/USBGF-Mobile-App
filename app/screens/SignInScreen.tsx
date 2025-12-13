@@ -77,7 +77,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
 
   const handleForgotPassword = () => {
-    Alert.alert('Forgot Password', 'This feature will be available soon.');
   };
 
   const handlePrivacyPolicy = () => {
@@ -152,10 +151,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
 
         <View style={styles.footerContainer}>
-          <TouchableOpacity onPress={handleForgotPassword}>
-            <Text style={styles.linkText}>Forgot password</Text>
-          </TouchableOpacity>
-          
           <View style={styles.legalLinks}>
             <TouchableOpacity onPress={handlePrivacyPolicy}>
               <Text style={styles.linkText}>Privacy Policy</Text>

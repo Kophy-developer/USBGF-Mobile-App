@@ -170,8 +170,9 @@ const styles = StyleSheet.create({
   headerText: {
     ...theme.typography.heading,
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: theme.colors.surface,
+    fontFamily: theme.typography.heading.fontFamily,
   },
   scroll: {
     flex: 1,

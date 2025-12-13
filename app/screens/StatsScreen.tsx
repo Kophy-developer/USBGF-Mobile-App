@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useAuth } from '../context/AuthContext';
@@ -14,22 +14,37 @@ const StatCard: React.FC<StatCardProps> = ({ label, value }) => (
   </View>
 );
 
+type StatsType = 'ABT' | 'ONLINE';
+
 export const StatsScreen: React.FC = () => {
   const { token, user } = useAuth();
+  const [statsType, setStatsType] = useState<StatsType>('ABT');
   const [allTime, setAllTime] = useState<UserStatsPeriod | null>(null);
   const [yearly, setYearly] = useState<UserStatsPeriod[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
 
   useEffect(() => {
     const loadStats = async () => {
-      if (!token) return;
+      if (!token || !user?.playerId) return;
       setLoading(true);
       setError(null);
+      // Reset selected year when switching stats type
+      setSelectedYear(null);
       try {
-        const data = await fetchUserStats(token, user?.playerId);
+        const clubId = statsType === 'ABT' ? 5 : 2;
+        const data = await fetchUserStats(token, user.playerId, clubId);
         setAllTime(data.allTime?.[0] ?? null);
-        setYearly(Array.isArray(data.yearly) ? data.yearly : []);
+        const yearlyData = Array.isArray(data.yearly) ? data.yearly : [];
+        setYearly(yearlyData);
+        // Set default selected year to the most recent year
+        if (yearlyData.length > 0) {
+          const years = yearlyData.map((p) => p.periodName ?? '').filter(Boolean);
+          if (years.length > 0) {
+            setSelectedYear(years[0]);
+          }
+        }
       } catch (err: any) {
         setError(err?.message ?? 'Unable to load statistics.');
       } finally {
@@ -37,7 +52,24 @@ export const StatsScreen: React.FC = () => {
       }
     };
     loadStats();
-  }, [token, user?.playerId]);
+  }, [token, user?.playerId, statsType]);
+
+  const availableYears = useMemo(() => {
+    return yearly
+      .map((period) => period.periodName ?? '')
+      .filter(Boolean)
+      .sort((a, b) => {
+        // Sort years in descending order (newest first)
+        const yearA = parseInt(a) || 0;
+        const yearB = parseInt(b) || 0;
+        return yearB - yearA;
+      });
+  }, [yearly]);
+
+  const selectedYearData = useMemo(() => {
+    if (!selectedYear) return null;
+    return yearly.find((period) => period.periodName === selectedYear) ?? null;
+  }, [yearly, selectedYear]);
 
   const allTimeCards = useMemo(() => {
     if (!allTime) {
@@ -74,8 +106,7 @@ export const StatsScreen: React.FC = () => {
 
   if (!token) {
     return (
-      <SafeAreaView style={styles.container} edges={['top','left','right']}>
-        <View style={styles.titleBar}><Text style={styles.titleText}>Statistics - All Time</Text></View>
+      <SafeAreaView style={styles.container} edges={['left','right']}>
         <View style={[styles.container, styles.centerContent]}>
           <Text style={styles.infoText}>Please sign in to view your statistics.</Text>
         </View>
@@ -84,9 +115,31 @@ export const StatsScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top','left','right']}>
-      <View style={styles.titleBar}><Text style={styles.titleText}>Statistics - All Time</Text></View>
+    <SafeAreaView style={styles.container} edges={['left','right']}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Stats Type Selector */}
+        <View style={styles.statsTypeSection}>
+          <Text style={styles.sectionHeading}>Statistics Type</Text>
+          <View style={styles.statsSwitch}>
+            <TouchableOpacity
+              style={[styles.switchPill, statsType === 'ABT' && styles.switchPillActiveLeft]}
+              onPress={() => setStatsType('ABT')}
+            >
+              <Text style={[styles.switchText, statsType === 'ABT' && styles.switchTextActive]}>
+                ABT
+              </Text>
+            </TouchableOpacity>
+          <TouchableOpacity
+              style={[styles.switchPill, statsType === 'ONLINE' && styles.switchPillActiveRight]}
+              onPress={() => setStatsType('ONLINE')}
+          >
+              <Text style={[styles.switchText, statsType === 'ONLINE' && styles.switchTextActive]}>
+                Online
+            </Text>
+          </TouchableOpacity>
+          </View>
+        </View>
+
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         {loading ? (
           <Text style={styles.infoText}>Loading...</Text>
@@ -98,27 +151,50 @@ export const StatsScreen: React.FC = () => {
         </View>
         )}
 
-        <Text style={styles.sectionHeading}>Yearly Statistics</Text>
+        <View style={styles.yearlySection}>
+          <Text style={styles.sectionHeading}>Yearly Statistics</Text>
+          {yearly.length > 0 && (
+            <View style={styles.yearSwitch}>
+              {availableYears.map((year) => (
+            <TouchableOpacity
+                  key={year}
+                  style={[
+                    styles.yearPill,
+                    selectedYear === year && styles.yearPillActive,
+                  ]}
+                  onPress={() => setSelectedYear(year)}
+            >
+                  <Text
+                    style={[
+                      styles.yearPillText,
+                      selectedYear === year && styles.yearPillTextActive,
+                    ]}
+                  >
+                    {year}
+              </Text>
+            </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
 
         {loading ? (
           <Text style={styles.infoText}>Loading yearly stats...</Text>
         ) : yearly.length === 0 ? (
           <Text style={styles.infoText}>No yearly statistics available.</Text>
+        ) : selectedYearData ? (
+          <View style={styles.grid}>
+            <StatCard label="Rating" value={(selectedYearData.LastEloRating ?? 0).toFixed(2)} />
+            <StatCard label="Wins" value={Number((selectedYearData.MatchesWon ?? 0).toFixed(2))} />
+            <StatCard label="Losses" value={Number((selectedYearData.MatchesLost ?? 0).toFixed(2))} />
+            <StatCard label="Events" value={Number((selectedYearData.EventsEntered ?? 0).toFixed(2))} />
+            <StatCard label="Events Won" value={Number((selectedYearData.EventsWon ?? 0).toFixed(2))} />
+            <StatCard label="Master Points" value={(selectedYearData.TotalMasterPointsReceived ?? 0).toFixed(2)} />
+          </View>
         ) : (
-          yearly.map((period) => (
-            <View key={period.id ?? period.periodName}>
-              <Text style={styles.yearHeading}>{period.periodName ?? '—'}</Text>
-              <View style={styles.grid}>
-                <StatCard label="Rating" value={(period.LastEloRating ?? 0).toFixed(2)} />
-                <StatCard label="Wins" value={Number((period.MatchesWon ?? 0).toFixed(2))} />
-                <StatCard label="Losses" value={Number((period.MatchesLost ?? 0).toFixed(2))} />
-                <StatCard label="Events" value={Number((period.EventsEntered ?? 0).toFixed(2))} />
-                <StatCard label="Events Won" value={Number((period.EventsWon ?? 0).toFixed(2))} />
-                <StatCard label="Master Points" value={(period.TotalMasterPointsReceived ?? 0).toFixed(2)} />
-              </View>
-            </View>
-          ))
+          <Text style={styles.infoText}>Please select a year to view statistics.</Text>
         )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -126,15 +202,69 @@ export const StatsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
-  titleBar: { backgroundColor: '#1B365D', paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['3xl'], marginHorizontal: theme.spacing['3xl'], marginTop: theme.spacing.lg, borderRadius: 4 },
-  titleText: { ...theme.typography.heading, color: theme.colors.surface, fontWeight: '700', fontSize: 18 },
-  content: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160 },
+  content: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing.sm, paddingBottom: 160 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.md, marginBottom: theme.spacing['2xl'] },
   card: { flexBasis: '48%', backgroundColor: '#FFFFFF', borderRadius: 12, paddingVertical: theme.spacing['2xl'], paddingHorizontal: theme.spacing.lg, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
-  cardValue: { ...theme.typography.heading, color: '#4F46E5', fontWeight: '800', fontSize: 24, marginBottom: theme.spacing.xs },
-  cardLabel: { ...theme.typography.body, color: theme.colors.textSecondary },
-  sectionHeading: { ...theme.typography.heading, fontWeight: '800', fontSize: 18, marginBottom: theme.spacing.lg },
-  yearHeading: { ...theme.typography.heading, fontWeight: '800', color: theme.colors.textPrimary, marginBottom: theme.spacing.md },
+  cardValue: { ...theme.typography.heading, color: '#4F46E5', fontWeight: '800', fontSize: 24, marginBottom: theme.spacing.xs, fontFamily: theme.typography.heading.fontFamily },
+  cardLabel: { ...theme.typography.body, color: theme.colors.textSecondary, fontFamily: theme.typography.body.fontFamily },
+  sectionHeading: { ...theme.typography.heading, fontWeight: '800', fontSize: 18, marginBottom: theme.spacing.md, fontFamily: theme.typography.heading.fontFamily },
+  statsTypeSection: { marginBottom: theme.spacing['2xl'] },
+  statsSwitch: {
+    flexDirection: 'row',
+    backgroundColor: '#EEF2FF',
+    borderRadius: 999,
+    padding: 4,
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  switchPill: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: 999,
+    backgroundColor: 'transparent',
+  },
+  switchPillActiveLeft: {
+    backgroundColor: '#1B365D',
+  },
+  switchPillActiveRight: {
+    backgroundColor: '#1B365D',
+  },
+  switchText: {
+    ...theme.typography.button,
+    color: theme.colors.textPrimary,
+    fontWeight: '700',
+  },
+  switchTextActive: {
+    color: theme.colors.textOnDark,
+  },
+  yearlySection: { marginBottom: theme.spacing.lg },
+  yearSwitch: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  yearPill: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: 999,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  yearPillActive: {
+    backgroundColor: '#1B365D',
+    borderColor: '#1B365D',
+  },
+  yearPillText: {
+    ...theme.typography.button,
+    color: theme.colors.textPrimary,
+    fontWeight: '700',
+  },
+  yearPillTextActive: {
+    color: theme.colors.textOnDark,
+  },
+  yearHeading: { ...theme.typography.heading, fontWeight: '800', color: theme.colors.textPrimary, marginBottom: theme.spacing.md, fontFamily: theme.typography.heading.fontFamily },
   infoText: { ...theme.typography.body, color: theme.colors.textSecondary, marginBottom: theme.spacing.md, textAlign: 'center' },
   errorText: { ...theme.typography.body, color: theme.colors.error, marginBottom: theme.spacing.md, textAlign: 'center' },
   centerContent: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: theme.spacing['3xl'] },

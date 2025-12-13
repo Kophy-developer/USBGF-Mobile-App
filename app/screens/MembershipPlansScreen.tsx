@@ -1,16 +1,20 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation';
+import { useAuth } from '../context/AuthContext';
+import { fetchUserProfile } from '../services/api';
 
 type Nav = StackNavigationProp<RootStackParamList, 'MembershipPlans'>;
 
 export const MembershipPlansScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const [billing, setBilling] = useState<'annual' | 'monthly'>('annual');
+  const { token, user } = useAuth();
+  const [currentPlanKey, setCurrentPlanKey] = useState<string | null>(null);
 
   const plans = useMemo(() => {
     if (billing === 'annual') {
@@ -76,7 +80,7 @@ export const MembershipPlansScreen: React.FC = () => {
         key: 'premium_plus',
         badge: 'P+',
         title: 'Premium Plus Membership',
-        priceLine: '$19/Annually',
+        priceLine: '$19/ Monthly',
         bullets: [
           'All Premium Benefits',
           'Print edition of Primetime',
@@ -84,6 +88,28 @@ export const MembershipPlansScreen: React.FC = () => {
       },
     ];
   }, [billing]);
+
+  useEffect(() => {
+    const loadCurrentPlan = async () => {
+      if (!token || !user?.playerId) return;
+      try {
+        const profile = await fetchUserProfile(token, user.playerId);
+        const memberType = (profile?.memberType || profile?.membership || '').toLowerCase();
+        if (memberType.includes('premium plus')) {
+          setCurrentPlanKey('premium_plus');
+        } else if (memberType.includes('premium')) {
+          setCurrentPlanKey('premium');
+        } else if (memberType.includes('basic')) {
+          setCurrentPlanKey('basic');
+        } else {
+          setCurrentPlanKey(null);
+        }
+      } catch {
+        setCurrentPlanKey(null);
+      }
+    };
+    loadCurrentPlan();
+  }, [token, user?.playerId]);
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -120,10 +146,21 @@ export const MembershipPlansScreen: React.FC = () => {
                   <Text key={i} style={styles.bullet}>{'\u2022'} {b}</Text>
                 ))}
                 <TouchableOpacity
-                  style={styles.selectBtn}
+                  style={[
+                    styles.selectBtn,
+                    currentPlanKey === p.key && styles.selectBtnDisabled,
+                  ]}
+                  disabled={currentPlanKey === p.key}
                   onPress={() => navigation.navigate('Payment', { planKey: p.key, billing })}
                 >
-                  <Text style={styles.selectBtnText}>Select Plan</Text>
+                  <Text
+                    style={[
+                      styles.selectBtnText,
+                      currentPlanKey === p.key && styles.selectBtnTextDisabled,
+                    ]}
+                  >
+                    {currentPlanKey === p.key ? 'Current Plan' : 'Select Plan'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -154,6 +191,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontWeight: '700',
     fontSize: ((theme.typography.caption as any)?.fontSize ?? 14) + 2,
+    fontFamily: theme.typography.caption.fontFamily,
   },
   toggleLabelActive: {
     color: theme.colors.textPrimary,
@@ -198,7 +236,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: theme.spacing['3xl'],
     paddingTop: Math.max((theme.spacing['2xl'] ?? 30) - 30, 0),
-    paddingBottom: theme.spacing['4xl'],
+    paddingBottom: 160,
   },
   planCard: {
     marginTop: theme.spacing.lg,
@@ -225,6 +263,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 20,
+    fontFamily: theme.typography.heading.fontFamily,
   },
   planTextCol: {
     flex: 1,
@@ -252,9 +291,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing['2xl'],
     borderRadius: 6,
   },
+  selectBtnDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
   selectBtnText: {
     ...theme.typography.button,
     color: theme.colors.surface,
     fontWeight: '700',
+  },
+  selectBtnTextDisabled: {
+    color: '#FFFFFF',
+    opacity: 0.85,
   },
 });

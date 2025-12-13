@@ -97,5 +97,6 @@ const styles = StyleSheet.create({
   text: {
     ...theme.typography.button,
     textAlign: 'center',
+    fontFamily: theme.typography.button.fontFamily,
   },
 });

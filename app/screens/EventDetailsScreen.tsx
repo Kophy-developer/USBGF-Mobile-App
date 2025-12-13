@@ -357,6 +357,14 @@ export const EventDetailsScreen: React.FC = () => {
               </View>
             ) : null}
 
+            {viewTypeParam === 'ABT' && params?.status === 'ACCEPTING' && !isUserRegistered && (
+              <View style={styles.noticeBox}>
+                <Text style={styles.noticeText}>
+                  If you wish to register for this ABT event, you need to go to the registration desk at the tournament, or email your tournament organizer.
+                </Text>
+              </View>
+            )}
+
             <View style={styles.section}>
               <Text style={styles.sectionHeading}>Actions</Text>
               <View style={styles.actions}>
@@ -378,6 +386,12 @@ export const EventDetailsScreen: React.FC = () => {
                       </TouchableOpacity>
                     ) : null}
                   </>
+                ) : viewTypeParam === 'ABT' ? (
+                  <View style={[styles.actionButton, styles.actionButtonDisabled]}>
+                    <Text style={styles.actionButtonText}>
+                      Registration at tournament desk or via organizer
+                    </Text>
+                  </View>
                 ) : (
                   <TouchableOpacity
                     style={[
@@ -411,14 +425,17 @@ const styles = StyleSheet.create({
     color: theme.colors.surface,
     textAlign: 'center',
     maxWidth: 220,
+    fontFamily: theme.typography.heading.fontFamily,
   },
   headerBack: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   },
   headerBackIcon: {
+    ...theme.typography.heading,
     fontSize: 24,
     color: theme.colors.surface,
+    fontFamily: theme.typography.heading.fontFamily,
   },
   content: {
     paddingHorizontal: theme.spacing['3xl'],
@@ -464,19 +481,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.heading.fontFamily,
   },
   label: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
+    fontFamily: theme.typography.body.fontFamily,
   },
   value: {
+    ...theme.typography.body,
     color: theme.colors.textPrimary,
     fontWeight: '600',
+    fontFamily: theme.typography.body.fontFamily,
   },
   description: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
     lineHeight: 22,
+    fontFamily: theme.typography.body.fontFamily,
   },
   eligibilityRow: {
     flexDirection: 'row',
@@ -484,17 +506,21 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   eligibilityIcon: {
+    ...theme.typography.body,
     fontSize: 18,
     marginTop: 2,
+    fontFamily: theme.typography.body.fontFamily,
   },
   eligibilityText: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,
     marginBottom: 2,
+    fontFamily: theme.typography.body.fontFamily,
   },
   eligibilityHint: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
+    fontFamily: theme.typography.caption.fontFamily,
   },
   playerRow: {
     flexDirection: 'row',
@@ -509,15 +535,18 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     flex: 1,
     marginRight: theme.spacing.md,
+    fontFamily: theme.typography.body.fontFamily,
   },
   playerStatus: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
+    fontFamily: theme.typography.caption.fontFamily,
   },
   moreNote: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.sm,
+    fontFamily: theme.typography.caption.fontFamily,
   },
   actions: {
     gap: theme.spacing.sm,
@@ -536,6 +565,7 @@ const styles = StyleSheet.create({
     ...theme.typography.button,
     color: theme.colors.surface,
     fontWeight: '700',
+    fontFamily: theme.typography.button.fontFamily,
   },
   withdrawButton: {
     backgroundColor: '#DA291C',
@@ -544,6 +574,21 @@ const styles = StyleSheet.create({
     ...theme.typography.button,
     color: theme.colors.surface,
     fontWeight: '700',
+    fontFamily: theme.typography.button.fontFamily,
+  },
+  noticeBox: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing['2xl'],
+  },
+  noticeText: {
+    ...theme.typography.body,
+    color: '#92400E',
+    fontSize: 14,
+    fontFamily: theme.typography.body.fontFamily,
   },
 });
 

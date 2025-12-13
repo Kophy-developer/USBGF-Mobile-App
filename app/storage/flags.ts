@@ -8,7 +8,8 @@ export async function setOnboardingSeen(): Promise<void> {
 
 export async function getOnboardingSeen(): Promise<boolean> {
   try {
-    return false;
+    const value = await AsyncStorage.getItem(KEY);
+    return value === 'true';
   } catch {
     return false;
   }

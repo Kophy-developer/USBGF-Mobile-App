@@ -4,7 +4,7 @@
     "slug": "ubgsf-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./app/assets/USBGF_com_logo.png",
+    "icon": "./app/assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./app/assets/USBGF_com_logo.png",
@@ -20,13 +20,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./app/assets/USBGF_com_logo.png",
+        "foregroundImage": "./app/assets/icon.png",
         "backgroundColor": "#1A1A2E"
       },
       "package": "org.usbgf.mobile"
-    },
-    "web": {
-      "favicon": "./app/assets/USBGF_com_logo.png"
     },
     "extra": {
       "eas": {
@@ -36,7 +33,8 @@
     "owner": "the_mastermind",
     "plugins": [
       "expo-font",
-      "expo-document-picker"
+      "expo-document-picker",
+      "expo-image-picker"
     ]
   }
 }

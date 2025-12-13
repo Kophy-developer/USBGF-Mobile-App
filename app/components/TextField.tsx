@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
     fontWeight: '500',
+    fontFamily: theme.typography.body.fontFamily,
   },
   container: {
     flexDirection: 'row',
@@ -119,6 +120,7 @@ const styles = StyleSheet.create({
     flex: 1,
     ...theme.typography.body,
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.body.fontFamily,
   },
   iconLeft: {
     marginRight: theme.spacing.sm,
@@ -130,10 +132,12 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.primary,
     fontWeight: '600',
+    fontFamily: theme.typography.caption.fontFamily,
   },
   errorText: {
     ...theme.typography.caption,
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
+    fontFamily: theme.typography.caption.fontFamily,
   },
 });

@@ -31,10 +31,6 @@ export const PaymentScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}> 
-        <Text style={styles.headerText}>Payment</Text>
-        <Text style={styles.subHeader}>Plan: {planKey.replace('_', ' ')} • {billing}</Text>
-      </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.form}> 
           <TextField label="Name on card" placeholder="Enter name as on card" value={nameOnCard} onChangeText={setNameOnCard} />
@@ -58,19 +54,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.surface,
-  },
-  header: {
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing['3xl'],
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  subHeader: {
-    marginTop: 4,
-    color: theme.colors.textSecondary,
   },
   scroll: { flex: 1 },
   scrollContent: {

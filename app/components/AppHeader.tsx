@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
+import { Platform } from 'react-native';
 
 type MenuItem = {
   label: string;
@@ -34,9 +36,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
-  const hasMenu = menuItems && menuItems.length > 0;
+  const hasMenu = Array.isArray(menuItems) && menuItems.length > 0;
   const shouldShowSearch = showSearch ?? Boolean(onSearchPress);
-  const topPadding = padTop ? Math.max(insets.top - theme.spacing.md, theme.spacing.xs) : 0;
+  const baseTopPadding = padTop ? Math.max(insets.top - theme.spacing.md, theme.spacing.xs) : 0;
+  const androidExtraTop = Platform.OS === 'android' ? 10 : 0;
+  const topPadding = baseTopPadding + androidExtraTop;
 
   const handleMenuPress = () => {
     if (!hasMenu) {
@@ -99,15 +103,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         )}
       </View>
 
-      {menuOpen && hasMenu && !onBackPress && (
-        <>
+      {hasMenu && (
+      <Modal
+          visible={menuOpen && !onBackPress}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <View style={styles.modalContainer}>
           <Pressable
             style={styles.backdrop}
             onPress={() => setMenuOpen(false)}
             accessibilityLabel="Close menu"
           />
-          <View style={[styles.menuDropdown, { top: insets.top + 84 }]}>
-            {menuItems!.map((item, index) => (
+          <View style={[styles.menuDropdown, { top: insets.top + 84 + (topPadding || 0) }]}>
+              {(menuItems ?? []).map((item, index) => (
               <React.Fragment key={item.label}>
                 {index > 0 && <View style={styles.menuDivider} />}
                 <TouchableOpacity
@@ -122,7 +132,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               </React.Fragment>
             ))}
           </View>
-        </>
+        </View>
+      </Modal>
       )}
     </>
   );
@@ -135,7 +146,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing['3xl'],
     paddingBottom: 0,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: '#FFFFFF', // Explicitly set white to prevent gradient
+    zIndex: 100,
+    elevation: 100,
   },
   menuButton: {
     padding: theme.spacing.sm,
@@ -167,6 +180,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: theme.colors.textPrimary,
   },
+  modalContainer: {
+    flex: 1,
+  },
   backdrop: {
     position: 'absolute',
     top: 0,
@@ -174,7 +190,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.2)',
-    zIndex: 900,
   },
   menuDropdown: {
     position: 'absolute',
@@ -188,9 +203,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 5,
+    elevation: 10,
     overflow: 'hidden',
-    zIndex: 1000,
   },
   menuItem: {
     paddingVertical: theme.spacing.lg,

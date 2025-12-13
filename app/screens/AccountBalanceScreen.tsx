@@ -8,17 +8,19 @@ import { RootStackParamList } from '../navigation';
 import { TextField } from '../components/TextField';
 import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
-import { fetchMemberTransactions, fetchUserProfile, MemberPressTransaction } from '../services/api';
+import { fetchUserProfile, fetchUserTransactions, UserTransaction } from '../services/api';
 
 export const AccountBalanceScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { token, user } = useAuth();
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [amount, setAmount] = useState('99.50');
-  const [method, setMethod] = useState<'paypal' | 'credit' | 'card'>('paypal');
+  const [method, setMethod] = useState<'paypal' | 'stripe' | 'card'>('paypal');
   const [cash, setCash] = useState<number | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
-  const [transactions, setTransactions] = useState<MemberPressTransaction[]>([]);
+  const [transactions, setTransactions] = useState<UserTransaction[]>([]);
+  const [activeTab, setActiveTab] = useState<'cash' | 'credit'>('cash');
+  const [displayedCount, setDisplayedCount] = useState(20); // Show 20 transactions initially
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,20 +38,24 @@ export const AccountBalanceScreen: React.FC = () => {
       setCash(typeof account?.cash === 'number' ? account.cash : null);
       setCredits(typeof account?.credits === 'number' ? account.credits : null);
 
-      const memberId = user?.id ?? (typeof account?.userId === 'number' ? account.userId : undefined);
-      if (memberId) {
-        const tx = await fetchMemberTransactions(memberId);
+      const accountId = typeof account?.accountId === 'number' ? account.accountId : undefined;
+      if (accountId) {
+        const tx = await fetchUserTransactions(token, accountId);
         setTransactions(
           tx
             .slice()
             .sort((a, b) => {
-              const aTime = new Date((a.created_at ?? '').replace(' ', 'T')).getTime() || 0;
-              const bTime = new Date((b.created_at ?? '').replace(' ', 'T')).getTime() || 0;
+              const aDate = a.timestamp ?? a.date ?? a.created_at ?? '';
+              const bDate = b.timestamp ?? b.date ?? b.created_at ?? '';
+              const aTime = new Date(aDate.replace(' ', 'T').replace('(UTC)', 'Z')).getTime() || 0;
+              const bTime = new Date(bDate.replace(' ', 'T').replace('(UTC)', 'Z')).getTime() || 0;
               return bTime - aTime;
             })
         );
+        setDisplayedCount(20); // Reset to initial count when new data loads
       } else {
         setTransactions([]);
+        setDisplayedCount(20);
       }
     } catch (err: any) {
       setError(err?.message ?? 'Unable to load account balance.');
@@ -60,28 +66,60 @@ export const AccountBalanceScreen: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.playerId, user?.id]);
 
   const formattedCash = useMemo(() => (cash != null ? `$${cash.toFixed(2)}` : '—'), [cash]);
   const formattedCredits = useMemo(() => (credits != null ? `$${credits.toFixed(2)}` : '—'), [credits]);
 
-  const renderAmountDelta = (transaction: MemberPressTransaction) => {
-    const amountValue = Number(transaction.amount ?? transaction.total ?? 0);
-    if (Number.isNaN(amountValue)) {
-      return transaction.amount ?? transaction.total ?? '—';
+  const filteredTransactions = useMemo(() => {
+    if (activeTab === 'cash') {
+      return transactions.filter(tx => {
+        const cashAmt = Number(tx.cashAmount ?? 0);
+        return !Number.isNaN(cashAmt) && cashAmt !== 0;
+      });
+    } else {
+      return transactions.filter(tx => {
+        const creditsAmt = Number(tx.creditsAmount ?? 0);
+        return !Number.isNaN(creditsAmt) && creditsAmt !== 0;
+      });
     }
-    const sign = amountValue >= 0 ? '+' : '-';
-    return `${sign}$${Math.abs(amountValue).toFixed(2)}`;
+  }, [transactions, activeTab]);
+
+  useEffect(() => {
+    setDisplayedCount(20);
+  }, [activeTab]);
+
+  const renderCashDelta = (transaction: UserTransaction) => {
+    const cashAmt = Number(transaction.cashAmount ?? 0);
+    if (Number.isNaN(cashAmt) || cashAmt === 0) {
+      return '—';
+    }
+    const sign = cashAmt >= 0 ? '+' : '-';
+    return `${sign}$${Math.abs(cashAmt).toFixed(2)}`;
   };
 
-  const formatDate = (value?: string) => {
-    if (!value) return '—';
-    const parsed = new Date(value.replace(' ', 'T'));
-    if (Number.isNaN(parsed.getTime())) {
-      return value;
+  const renderCreditsDelta = (transaction: UserTransaction) => {
+    const creditsAmt = Number(transaction.creditsAmount ?? 0);
+    if (Number.isNaN(creditsAmt) || creditsAmt === 0) {
+      return '—';
     }
-    return parsed.toLocaleDateString();
+    const sign = creditsAmt >= 0 ? '+' : '-';
+    return `${sign}$${Math.abs(creditsAmt).toFixed(2)}`;
+  };
+
+  const formatDate = (transaction: UserTransaction) => {
+    const dateValue = transaction.timestamp ?? transaction.date ?? transaction.created_at;
+    if (!dateValue) return '—';
+    const cleaned = dateValue.replace('(UTC)', 'Z').replace(' ', 'T');
+    const parsed = new Date(cleaned);
+    if (Number.isNaN(parsed.getTime())) {
+      return dateValue;
+    }
+    return parsed.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   };
 
   if (!isAuthenticated) {
@@ -104,13 +142,16 @@ export const AccountBalanceScreen: React.FC = () => {
           </View>
         ) : (
           <>
-        <View style={styles.row}> 
-          <Text style={styles.label}>Cash:</Text>
-          <Text style={styles.value}>{formattedCash}</Text>
+            {/* Balance Cards */}
+            <View style={styles.balanceContainer}>
+              <View style={styles.balanceCard}>
+                <Text style={styles.balanceLabel}>Cash Balance</Text>
+                <Text style={styles.balanceValue}>{formattedCash}</Text>
+              </View>
+              <View style={styles.balanceCard}>
+                <Text style={styles.balanceLabel}>Credit Balance</Text>
+                <Text style={styles.balanceValue}>{formattedCredits}</Text>
         </View>
-        <View style={styles.row}> 
-          <Text style={styles.label}>Credit:</Text>
-          <Text style={styles.value}>{formattedCredits}</Text>
         </View>
 
         <View style={styles.addFundsContainer}>
@@ -121,31 +162,90 @@ export const AccountBalanceScreen: React.FC = () => {
 
         <Text style={styles.historyTitle}>Transaction History</Text>
 
-        {loading ? (
-          <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        ) : transactions.length === 0 ? (
-          <Text style={styles.infoText}>No transactions recorded yet.</Text>
-        ) : (
-          <>
+            {/* Tabs */}
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'cash' && styles.tabActive]}
+                onPress={() => setActiveTab('cash')}
+              >
+                <Text style={[styles.tabText, activeTab === 'cash' && styles.tabTextActive]}>
+                  Cash Transactions
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'credit' && styles.tabActive]}
+                onPress={() => setActiveTab('credit')}
+              >
+                <Text style={[styles.tabText, activeTab === 'credit' && styles.tabTextActive]}>
+                  Credit Transactions
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {loading ? (
+              <View style={styles.centerContent}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </View>
+            ) : filteredTransactions.length === 0 ? (
+              <Text style={styles.infoText}>
+                No {activeTab === 'cash' ? 'cash' : 'credit'} transactions recorded yet.
+              </Text>
+            ) : (
+              <>
         <View style={styles.tableHeader}> 
-          <Text style={[styles.th, styles.colDate]}>Date</Text>
-          <Text style={[styles.th, styles.colDelta]}>+ / -</Text>
-          <Text style={[styles.th, styles.colBalance]}>Balance</Text>
+                  <View style={styles.colDate}>
+                    <Text style={styles.th}>Date</Text>
+                  </View>
+                  <View style={styles.colDelta}>
+                    <Text style={[styles.th, styles.centerText]}>
+                      {activeTab === 'cash' ? 'Cash +/-' : 'Credit +/-'}
+                    </Text>
+                  </View>
+                  <View style={styles.colBalance}>
+                    <Text style={[styles.th, styles.rightText]}>
+                      {activeTab === 'cash' ? 'Cash Balance' : 'Credit Balance'}
+                    </Text>
+                  </View>
         </View>
 
-        {transactions.map((transaction) => (
-          <View key={transaction.id} style={styles.tableRow}> 
-            <Text style={[styles.td, styles.colDate]}>{formatDate(transaction.created_at)}</Text>
-            <Text style={[styles.td, styles.colDelta]}>{renderAmountDelta(transaction)}</Text>
-            <Text style={[styles.td, styles.colBalance]}>
-              {transaction.total ? `$${Number(transaction.total).toFixed(2)}` : '—'}
-            </Text>
-          </View>
-        ))}
-          </>
-        )}
+                {filteredTransactions.slice(0, displayedCount).map((transaction) => (
+                  <View key={transaction.id ?? transaction.trans_num ?? Math.random()} style={styles.tableRow}> 
+                    <View style={styles.colDate}>
+                      <Text style={styles.td}>{formatDate(transaction)}</Text>
+                    </View>
+                    <View style={styles.colDelta}>
+                      <Text style={[styles.td, styles.centerText]}>
+                        {activeTab === 'cash' ? renderCashDelta(transaction) : renderCreditsDelta(transaction)}
+                      </Text>
+                    </View>
+                    <View style={styles.colBalance}>
+                      <Text style={[styles.td, styles.rightText]}>
+                        {activeTab === 'cash' 
+                          ? (transaction.newCashBalance != null 
+                              ? `$${Number(transaction.newCashBalance).toFixed(2)}` 
+                              : '—')
+                          : (transaction.newCreditsBalance != null 
+                              ? `$${Number(transaction.newCreditsBalance).toFixed(2)}` 
+                              : '—')}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+
+                {filteredTransactions.length > displayedCount && (
+                  <View style={styles.loadMoreContainer}>
+                    <TouchableOpacity 
+                      style={styles.loadMoreButton} 
+                      onPress={() => setDisplayedCount(prev => Math.min(prev + 20, filteredTransactions.length))}
+                    >
+                      <Text style={styles.loadMoreText}>
+                        Load More ({filteredTransactions.length - displayedCount} remaining)
+                      </Text>
+                    </TouchableOpacity>
+        </View>
+                )}
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -159,18 +259,18 @@ export const AccountBalanceScreen: React.FC = () => {
               placeholder="0.00"
               value={amount}
               onChangeText={setAmount}
-              keyboardType="decimal-pad"
+              keyboardType="numeric"
             />
 
             <View style={styles.methods}>
               <TouchableOpacity style={[styles.methodBtn, method==='paypal' && styles.methodSelected]} onPress={() => setMethod('paypal')}>
-                <Text style={styles.methodText}>PayPal</Text>
+                <Text style={[styles.methodText, method==='paypal' && styles.methodTextSelected]}>PayPal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.methodBtn, method==='credit' && styles.methodSelected]} onPress={() => setMethod('credit')}>
-                <Text style={styles.methodText}>PayPal CREDIT</Text>
+              <TouchableOpacity style={[styles.methodBtn, method==='stripe' && styles.methodSelected]} onPress={() => setMethod('stripe')}>
+                <Text style={[styles.methodText, method==='stripe' && styles.methodTextSelected]}>Stripe</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.methodBtn, method==='card' && styles.methodSelected]} onPress={() => setMethod('card')}>
-                <Text style={styles.methodText}>Debit or Credit Card</Text>
+                <Text style={[styles.methodText, method==='card' && styles.methodTextSelected]}>Debit or Credit Card</Text>
               </TouchableOpacity>
             </View>
 
@@ -205,24 +305,32 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing['2xl'],
     paddingBottom: 160,
   },
-  row: {
+  balanceContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing['3xl'],
     gap: theme.spacing.lg,
+    marginBottom: theme.spacing['3xl'],
   },
-  label: {
+  balanceCard: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: theme.spacing['2xl'],
+    alignItems: 'center',
+  },
+  balanceLabel: {
+    ...theme.typography.caption,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+    fontWeight: '600',
+    fontFamily: theme.typography.caption.fontFamily,
+  },
+  balanceValue: {
     ...theme.typography.heading,
-    fontSize: 22,
+    fontSize: 24,
     color: theme.colors.textPrimary,
     fontWeight: '700',
-  },
-  value: {
-    ...theme.typography.body,
-    marginLeft: theme.spacing['2xl'],
-    fontSize: 20,
-    color: theme.colors.textPrimary,
-    fontWeight: '600',
+    fontFamily: theme.typography.heading.fontFamily,
   },
   addFundsContainer: {
     alignItems: 'flex-start',
@@ -241,36 +349,110 @@ const styles = StyleSheet.create({
     color: theme.colors.surface,
     fontSize: 18,
     fontWeight: '700',
+    fontFamily: theme.typography.button.fontFamily,
   },
   historyTitle: {
     ...theme.typography.heading,
     fontSize: 22,
     color: theme.colors.textPrimary,
     fontWeight: '700',
+    marginBottom: theme.spacing.lg,
+    fontFamily: theme.typography.heading.fontFamily,
+  },
+  tabContainer: {
+    flexDirection: 'row',
     marginBottom: theme.spacing['2xl'],
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 4,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: '#1B365D',
+  },
+  tabText: {
+    ...theme.typography.body,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    fontFamily: theme.typography.body.fontFamily,
+  },
+  tabTextActive: {
+    color: theme.colors.surface,
   },
   tableHeader: {
     flexDirection: 'row',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   tableRow: {
     flexDirection: 'row',
     paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   th: {
     ...theme.typography.body,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.body.fontFamily,
   },
   td: {
     ...theme.typography.body,
-    fontSize: 16,
+    fontSize: 14,
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.body.fontFamily,
   },
-  colDate: { flex: 2 },
-  colDelta: { flex: 1, textAlign: 'center' as const },
-  colBalance: { flex: 1, textAlign: 'right' as const },
+  colDate: { 
+    flex: 1.5,
+    minWidth: 100,
+  },
+  colDelta: { 
+    flex: 1.2,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  colBalance: { 
+    flex: 1.3,
+    minWidth: 120,
+    alignItems: 'flex-end',
+  },
+  centerText: {
+    textAlign: 'center',
+  },
+  rightText: {
+    textAlign: 'right',
+  },
+  loadMoreContainer: {
+    alignItems: 'center',
+    marginTop: theme.spacing['2xl'],
+    marginBottom: theme.spacing.lg,
+  },
+  loadMoreButton: {
+    backgroundColor: '#1B365D',
+    borderRadius: 8,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing['2xl'],
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    ...theme.typography.button,
+    color: theme.colors.surface,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: theme.typography.button.fontFamily,
+  },
   centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -310,12 +492,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
+    fontFamily: theme.typography.heading.fontFamily,
   },
   modalSub: {
     ...theme.typography.caption,
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
+    fontFamily: theme.typography.caption.fontFamily,
   },
   methods: { gap: theme.spacing.sm, marginVertical: theme.spacing.md },
   methodBtn: {
@@ -331,7 +515,11 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: '#111',
     fontWeight: '600',
+    fontFamily: theme.typography.body.fontFamily,
+  },
+  methodTextSelected: {
+    color: '#FFFFFF',
   },
   modalButtons: { gap: theme.spacing.md, marginTop: theme.spacing.lg, alignItems: 'center' },
-  cancelText: { ...theme.typography.button, color: '#DC2626', fontWeight: '600' },
+  cancelText: { ...theme.typography.button, color: '#DC2626', fontWeight: '600', fontFamily: theme.typography.button.fontFamily },
 });

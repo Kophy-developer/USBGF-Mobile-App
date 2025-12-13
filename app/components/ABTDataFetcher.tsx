@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { parseABTEventsFromHTML, setInMemoryEvents, cacheEvents } from '../services/abtCalendarService';
+import { parseABTEventsFromHTML } from '../services/abtCalendarService';
 import { theme } from '../theme/tokens';
 
 export const ABTDataFetcher: React.FC = () => {
@@ -54,8 +54,6 @@ export const ABTDataFetcher: React.FC = () => {
       if (data.type === 'htmlContent' && data.html) {
         const parsedEvents = parseABTEventsFromHTML(data.html);
         if (parsedEvents.length > 0) {
-          setInMemoryEvents(parsedEvents);
-          cacheEvents(parsedEvents);
           console.log(`ABT Calendar: Fetched ${parsedEvents.length} events on app launch`);
           if (error) {
             setError(null);
@@ -154,6 +152,7 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.lg,
     ...theme.typography.body,
     fontWeight: '600',
+    fontFamily: theme.typography.body.fontFamily,
   },
   retryButton: {
     paddingVertical: theme.spacing.xs,
@@ -166,6 +165,7 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.surface,
     fontWeight: '700',
+    fontFamily: theme.typography.caption.fontFamily,
   },
 });
 

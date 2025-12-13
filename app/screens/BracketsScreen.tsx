@@ -1,16 +1,25 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme/tokens';
 import { useAuth } from '../context/AuthContext';
-import { fetchMatches, fetchBracketList, fetchBracketInfo, BracketNode, MatchSummary } from '../services/api';
-
-type FlattenedMatch = {
-  contestId: number;
-  label: string;
-  roundOfPlay: number;
-  contestants: Array<{ name: string; isWinner: boolean }>;
-};
+import {
+  fetchBracketList,
+  fetchBracketInfo,
+  BracketNode,
+  fetchEvents as fetchEventsAPI,
+  EventSummary as APIEventSummary,
+} from '../services/api';
 
 type EventSummary = {
   id: number;
@@ -20,10 +29,10 @@ type EventSummary = {
 };
 
 const parseEventDate = (value?: string): number => {
-  if (!value) return Number.POSITIVE_INFINITY;
+  if (!value) return Number.NEGATIVE_INFINITY;
   const normalized = value.replace(/-/g, ' ');
   const parsed = new Date(normalized).getTime();
-  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
 };
 
 const formatEventDate = (value?: string) => {
@@ -46,12 +55,14 @@ export const BracketsScreen: React.FC = () => {
   const [eventError, setEventError] = useState<string | null>(null);
 
   const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null);
-  const [filter, setFilter] = useState<'all' | 'remaining' | 'final'>('all');
+  const [filter, setFilter] = useState<'all' | 'final'>('all');
+  const [selectedBracketId, setSelectedBracketId] = useState<number | null>(null);
   const [brackets, setBrackets] = useState<
-    Array<{ id: number; name: string; matches: FlattenedMatch[] }>
+    Array<{ id: number; name: string; tree: BracketNode[] }>
   >([]);
   const [loadingBrackets, setLoadingBrackets] = useState(false);
   const [bracketError, setBracketError] = useState<string | null>(null);
+  const [bracketPickerOpen, setBracketPickerOpen] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     if (!token) {
@@ -61,29 +72,49 @@ export const BracketsScreen: React.FC = () => {
     setLoadingEvents(true);
     setEventError(null);
     try {
-      const [abt, online] = await Promise.all([fetchMatches(token, 5), fetchMatches(token, 2)]);
+      const clubId = 5;
+      
+      const [currentEvents, completedEvents] = await Promise.all([
+        fetchEventsAPI(token, { clubId, playerId: undefined, tab: 'In Progress' }),
+        fetchEventsAPI(token, { clubId, playerId: undefined, tab: 'Completed' }),
+      ]);
 
       const eventMap = new Map<number, EventSummary>();
-      const collect = (payload: MatchSummary[], clubId: number) => {
-        payload.forEach((match) => {
-          const event = match.event;
+      const collect = (eventsList: APIEventSummary[], club: number, isCompleted: boolean) => {
+        eventsList.forEach((event) => {
           if (event?.id) {
-            eventMap.set(event.id, {
-              id: event.id,
-              name: event.name ?? `Event #${event.id}`,
-              clubId,
-              startTime: match.date,
-            });
+            const hasWinner = event.winner && String(event.winner).trim().length > 0;
+            if (isCompleted ? hasWinner : !hasWinner) {
+              eventMap.set(event.id, {
+                id: event.id,
+                name: event.nameWithTournament || (event.name ?? `Event #${event.id}`),
+                clubId: club,
+                startTime:
+                  event.start ||
+                  event.tournament?.start ||
+                  (event as any)?.updatedAt ||
+                  (event as any)?.createdAt,
+              });
+            }
           }
         });
       };
 
-      collect(Array.isArray(abt) ? abt : [], 5);
-      collect(Array.isArray(online) ? online : [], 2);
+      collect(Array.isArray(currentEvents?.events) ? currentEvents.events : [], clubId, false);
+      const acceptingEvents = await fetchEventsAPI(token, {
+        clubId,
+        playerId: undefined,
+        tab: 'Accepting Entries',
+      });
+      collect(Array.isArray(acceptingEvents?.events) ? acceptingEvents.events : [], clubId, false);
+      collect(Array.isArray(completedEvents?.events) ? completedEvents.events : [], clubId, true);
 
-      const sortedEvents = Array.from(eventMap.values()).sort(
-        (a, b) => parseEventDate(a.startTime) - parseEventDate(b.startTime)
-      );
+      const sortedEvents = Array.from(eventMap.values()).sort((a, b) => {
+        const aTime = parseEventDate(a.startTime);
+        const bTime = parseEventDate(b.startTime);
+        if (aTime !== bTime) return bTime - aTime;
+        return (b.id || 0) - (a.id || 0);
+      });
       setEvents(sortedEvents);
     } catch (err: any) {
       setEventError(err?.message || 'Unable to load events.');
@@ -97,18 +128,31 @@ export const BracketsScreen: React.FC = () => {
     fetchEvents();
   }, [fetchEvents]);
 
-  const flattenMatches = useCallback((nodes: BracketNode[]): FlattenedMatch[] => {
-    const matches: FlattenedMatch[] = [];
+  type BracketRound = {
+    name: string;
+    matches: Array<{
+      id: string | number;
+      players: Array<string | null>;
+      winner: string | null;
+    }>;
+  };
+
+  const transformBracketToRounds = useCallback((nodes: BracketNode[]): BracketRound[] => {
+    const allMatches: Array<{
+      round: number;
+      id: number;
+      players: Array<{ name: string; isWinner: boolean }>;
+    }> = [];
 
     const traverse = (node: BracketNode) => {
       if (node.type === 'contest' && node.children) {
         const contestants = node.children.filter((child) => child.type === 'contestant');
         if (contestants.length >= 1) {
-          matches.push({
-            contestId: node.data?.id ?? Math.random(),
-            label: node.data?.label ?? 'Match',
-            roundOfPlay: node.data?.roundOfPlay ?? 0,
-            contestants: contestants.map((child) => ({
+          const round = node.data?.roundOfPlay ?? 0;
+          allMatches.push({
+            round,
+            id: node.data?.id ?? Math.random(),
+            players: contestants.map((child) => ({
               name: child.data?.entrant?.name ?? 'TBD',
               isWinner: !!child.data?.isWinner,
             })),
@@ -119,7 +163,33 @@ export const BracketsScreen: React.FC = () => {
     };
 
     nodes.forEach(traverse);
-    return matches;
+
+    const roundMap = new Map<number, BracketRound['matches']>();
+    
+    allMatches.forEach((match) => {
+      const round = match.round;
+      const players = match.players.map((p) => p.name);
+      const winner = match.players.find((p) => p.isWinner)?.name || null;
+      const matchPlayers: Array<string | null> = [players[0] || null, players[1] || null];
+
+      if (!roundMap.has(round)) {
+        roundMap.set(round, []);
+      }
+      roundMap.get(round)!.push({
+        id: match.id,
+        players: matchPlayers,
+        winner,
+      });
+    });
+
+    const rounds: BracketRound[] = Array.from(roundMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([roundNum, matches]) => ({
+        name: roundNum === 0 ? 'Final' : `Round ${roundNum}`,
+        matches,
+      }));
+
+    return rounds;
   }, []);
 
   const loadBrackets = useCallback(
@@ -149,18 +219,16 @@ export const BracketsScreen: React.FC = () => {
           )
         );
 
-        const parsed = infos.map(({ bracket, response }) => {
-          const matches = response?.data?.children
-            ? flattenMatches(response.data.children)
-            : [];
-          return {
-            id: bracket.id,
-            name: bracket.name,
-            matches,
-          };
-        });
+        const parsed = infos.map(({ bracket, response }) => ({
+          id: bracket.id,
+          name: bracket.name,
+          tree: response?.data?.children || [],
+        }));
 
         setBrackets(parsed);
+        if (parsed.length > 0 && !selectedBracketId) {
+          setSelectedBracketId(parsed[0].id);
+        }
       } catch (err: any) {
         setBracketError(err?.message || 'Unable to load bracket information.');
         setBrackets([]);
@@ -168,7 +236,7 @@ export const BracketsScreen: React.FC = () => {
         setLoadingBrackets(false);
       }
     },
-    [token, flattenMatches]
+    [token, selectedBracketId]
   );
 
   useEffect(() => {
@@ -177,18 +245,22 @@ export const BracketsScreen: React.FC = () => {
     }
   }, [selectedEvent, filter, loadBrackets]);
 
-  const groupedMatches = (matches: FlattenedMatch[]) => {
-    const groups = new Map<number, FlattenedMatch[]>();
-    matches.forEach((match) => {
-      const key = match.roundOfPlay ?? 0;
-      const list = groups.get(key) ?? [];
-      list.push(match);
-      groups.set(key, list);
-    });
-    return Array.from(groups.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([round, list]) => ({ round, matches: list }));
-  };
+  const selectedBracket = useMemo(() => {
+    return brackets.find((b) => b.id === selectedBracketId) || null;
+  }, [brackets, selectedBracketId]);
+
+  const bracketRounds = useMemo(() => {
+    if (!selectedBracket) return [];
+    let rounds = transformBracketToRounds(selectedBracket.tree);
+    
+    if (filter === 'final' && rounds.length > 0) {
+      const maxRoundIndex = rounds.length - 1;
+      const startIndex = Math.max(0, maxRoundIndex - 2);
+      rounds = rounds.slice(startIndex);
+    }
+    
+    return rounds;
+  }, [selectedBracket, filter, transformBracketToRounds]);
 
   const renderEvents = () => {
     if (loadingEvents) {
@@ -210,7 +282,9 @@ export const BracketsScreen: React.FC = () => {
       );
     }
 
-    if (!events.length) {
+    const filteredEvents = events;
+
+    if (!filteredEvents.length) {
       return (
         <View style={styles.centerContent}>
           <Text style={styles.infoText}>No events available yet.</Text>
@@ -220,8 +294,8 @@ export const BracketsScreen: React.FC = () => {
 
     return (
       <>
-        <Text style={styles.pageTitle}>Upcoming Events</Text>
-        {events.map((event) => (
+        <Text style={styles.pageTitle}>ABT Events</Text>
+        {filteredEvents.map((event) => (
           <TouchableOpacity
             key={event.id}
             style={styles.eventCard}
@@ -263,7 +337,7 @@ export const BracketsScreen: React.FC = () => {
       );
     }
 
-    if (!brackets.length) {
+    if (!brackets.length || !selectedBracket) {
       return (
         <View style={styles.centerContent}>
           <Text style={styles.infoText}>No bracket data available for this filter.</Text>
@@ -271,56 +345,140 @@ export const BracketsScreen: React.FC = () => {
       );
     }
 
-    return brackets.map((bracket) => {
-      const grouped = groupedMatches(bracket.matches);
-      return (
-        <View key={bracket.id} style={styles.bracketCard}>
-          <Text style={styles.bracketTitle}>{bracket.name}</Text>
-          {grouped.map((group, groupIndex) => {
-            const nextRoundLabel =
-              groupIndex === grouped.length - 1 ? 'Champion' : `Round ${group.round + 1}`;
-            return (
-              <View key={group.round} style={styles.roundBlock}>
-                <View style={styles.roundHeader}>
-                  <View style={styles.roundIndicator}>
-                    <Text style={styles.roundIndicatorText}>{group.round}</Text>
+    const PLAYER_BOX_HEIGHT = 50;
+    const GAP_BETWEEN_PLAYERS = 8;
+    const MATCH_HEIGHT = PLAYER_BOX_HEIGHT * 2 + GAP_BETWEEN_PLAYERS;
+    const VERTICAL_SPACING_BETWEEN_MATCHES = 40;
+    const HORIZONTAL_ROUND_SPACING = 100;
+    const CONNECTOR_WIDTH = 40;
+
+    return (
+      <View style={styles.bracketContainer}>
+        <Text style={styles.bracketTitle}>{selectedBracket.name}</Text>
+        
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.bracketScrollContent}
+        >
+          <View style={{ flexDirection: 'row' }}>
+            {bracketRounds.map((round, roundIndex) => {
+              const isLastRound = roundIndex === bracketRounds.length - 1;
+              
+              return (
+                <View key={roundIndex} style={{ marginRight: isLastRound ? 0 : HORIZONTAL_ROUND_SPACING }}>
+                  <View style={styles.roundHeaderBox}>
+                    <Ionicons name="trophy" size={20} color="#1B365D" />
+                    <Text style={styles.roundHeaderText}>{round.name}</Text>
                   </View>
-                  <Text style={styles.roundTitle}>Round {group.round}</Text>
-                </View>
-                {group.matches.map((match) => (
-                  <View key={match.contestId} style={styles.matchCard}>
-                    <Text style={styles.matchLabel}>{match.label}</Text>
-                    {match.contestants.map((contestant, idx) => (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.contestantRow,
-                        contestant.isWinner && styles.contestantRowWinner,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.contestantName,
-                          contestant.isWinner && styles.contestantNameWinner,
-                        ]}
-                      >
-                        {contestant.name}
-                      </Text>
-                      {contestant.isWinner ? (
-                        <View style={styles.advanceBadge}>
-                          <Text style={styles.advanceBadgeText}>Advances to {nextRoundLabel}</Text>
+
+                  <View style={{ marginTop: 20, position: 'relative' }}>
+                    {round.matches.map((match, matchIndex) => {
+                      const player1 = match.players[0];
+                      const player2 = match.players[1];
+                      const isPlayer1Winner = player1 === match.winner;
+                      const isPlayer2Winner = player2 === match.winner;
+
+                      // Calculate vertical spacing: each subsequent round should center between pairs
+                      const verticalMultiplier = Math.pow(2, roundIndex);
+                      const baseSpacing = MATCH_HEIGHT + VERTICAL_SPACING_BETWEEN_MATCHES;
+                      const topPosition = matchIndex * verticalMultiplier * baseSpacing + 
+                                         (verticalMultiplier - 1) * baseSpacing / 2;
+
+                      // Calculate center Y position of this match for connector drawing
+                      const matchCenterY = topPosition + MATCH_HEIGHT / 2;
+
+                      return (
+                        <View key={match.id}>
+                          {/* Draw connectors from previous round if not first round */}
+                          {roundIndex > 0 && (
+                            <View style={{ position: 'absolute', top: topPosition, left: -CONNECTOR_WIDTH }}>
+                              {/* Horizontal line from left connecting to this match */}
+                              <View 
+                                style={{
+                                  position: 'absolute',
+                                  top: MATCH_HEIGHT / 2,
+                                  left: 0,
+                                  width: CONNECTOR_WIDTH,
+                                  height: 2,
+                                  backgroundColor: '#1B365D',
+                                }}
+                              />
+                              
+                              {/* Vertical line connecting two matches from previous round */}
+                              {matchIndex * 2 + 1 < bracketRounds[roundIndex - 1].matches.length && (
+                                <>
+                                  <View 
+                                    style={{
+                                      position: 'absolute',
+                                      top: -verticalMultiplier * baseSpacing / 2 + MATCH_HEIGHT / 2,
+                                      left: 0,
+                                      width: 2,
+                                      height: verticalMultiplier * baseSpacing,
+                                      backgroundColor: '#1B365D',
+                                    }}
+                                  />
+                                </>
+                              )}
+                            </View>
+                          )}
+
+                          {/* Match container with players */}
+                          <View 
+                            style={{
+                              position: 'absolute',
+                              top: topPosition,
+                              left: 0,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                            }}
+                          >
+                            {/* Player boxes */}
+                            <View style={{ gap: GAP_BETWEEN_PLAYERS }}>
+                              <View
+                                style={[
+                                  styles.playerBox,
+                                  isPlayer1Winner ? styles.playerBoxWinner : styles.playerBoxLoser,
+                                ]}
+                              >
+                                <Text style={styles.playerNameText}>{player1 || 'TBD'}</Text>
+                              </View>
+
+                              <View
+                                style={[
+                                  styles.playerBox,
+                                  isPlayer2Winner ? styles.playerBoxWinner : styles.playerBoxLoser,
+                                ]}
+                              >
+                                <Text style={styles.playerNameText}>{player2 || 'TBD'}</Text>
+                              </View>
+                            </View>
+
+                            {/* Horizontal connector line extending to the right (except for last round) */}
+                            {!isLastRound && (
+                              <View 
+                                style={{
+                                  width: CONNECTOR_WIDTH,
+                                  height: 2,
+                                  backgroundColor: '#1B365D',
+                                  position: 'absolute',
+                                  left: 180,
+                                  top: MATCH_HEIGHT / 2,
+                                }}
+                              />
+                            )}
+                          </View>
                         </View>
-                      ) : null}
-                    </View>
-                    ))}
+                      );
+                    })}
                   </View>
-                ))}
-              </View>
-            );
-          })}
-        </View>
-      );
-    });
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </View>
+    );
   };
 
   return (
@@ -340,36 +498,85 @@ export const BracketsScreen: React.FC = () => {
                 style={[styles.filterPill, filter === 'all' && styles.filterPillActive]}
                 onPress={() => setFilter('all')}
               >
-                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterPill, filter === 'remaining' && styles.filterPillActive]}
-                onPress={() => setFilter('remaining')}
-              >
-                <Text style={[styles.filterText, filter === 'remaining' && styles.filterTextActive]}>
-                  Remaining
+                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
+                  All Rounds
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.filterPill, filter === 'final' && styles.filterPillActive]}
                 onPress={() => setFilter('final')}
               >
-                <Text style={[styles.filterText, filter === 'final' && styles.filterTextActive]}>Final 3</Text>
+                <Text style={[styles.filterText, filter === 'final' && styles.filterTextActive]}>
+                  Final 3
+                </Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.bracketSelector}
+              onPress={() => setBracketPickerOpen(true)}
+            >
+              <Text style={styles.bracketSelectorText}>
+                {selectedBracket?.name || 'Show All Brackets'}
+              </Text>
+              <Text style={styles.bracketSelectorChevron}>▾</Text>
+            </TouchableOpacity>
 
             {renderBrackets()}
           </>
         )}
       </ScrollView>
+
+      <Modal transparent visible={bracketPickerOpen} animationType="fade">
+        <Pressable style={styles.modalBackdrop} onPress={() => setBracketPickerOpen(false)} />
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Select Bracket</Text>
+          {brackets.map((bracket) => (
+            <TouchableOpacity
+              key={bracket.id}
+              style={[
+                styles.eventTypeOption,
+                selectedBracketId === bracket.id && styles.eventTypeOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedBracketId(bracket.id);
+                setBracketPickerOpen(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.eventTypeOptionText,
+                  selectedBracketId === bracket.id && styles.eventTypeOptionTextActive,
+                ]}
+              >
+                {bracket.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={styles.modalCancel} onPress={() => setBracketPickerOpen(false)}>
+            <Text style={styles.modalCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  vContent: { paddingVertical: theme.spacing['2xl'], paddingHorizontal: theme.spacing['3xl'], paddingBottom: 160, gap: theme.spacing['2xl'] },
-  pageTitle: { ...theme.typography.heading, fontWeight: '800', fontSize: 22, color: theme.colors.textPrimary },
+  vContent: {
+    paddingVertical: theme.spacing['2xl'],
+    paddingHorizontal: theme.spacing['3xl'],
+    paddingBottom: 160,
+    gap: theme.spacing['2xl'],
+  },
+  pageTitle: {
+    ...theme.typography.heading,
+    fontWeight: '800',
+    fontSize: 22,
+    color: theme.colors.textPrimary,
+    fontFamily: theme.typography.heading.fontFamily,
+  },
   eventCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -383,10 +590,16 @@ const styles = StyleSheet.create({
     elevation: 2,
     gap: theme.spacing.xs,
   },
-  eventName: { ...theme.typography.heading, fontSize: 18, fontWeight: '700', color: theme.colors.textPrimary },
-  eventMeta: { ...theme.typography.caption, color: '#6B7280' },
+  eventName: {
+    ...theme.typography.heading,
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    fontFamily: theme.typography.heading.fontFamily,
+  },
+  eventMeta: { ...theme.typography.caption, color: '#6B7280', fontFamily: theme.typography.caption.fontFamily },
   backLink: { marginTop: theme.spacing.sm },
-  backLinkText: { ...theme.typography.caption, color: '#1B365D', fontWeight: '700' },
+  backLinkText: { ...theme.typography.caption, color: '#1B365D', fontWeight: '700', fontFamily: theme.typography.caption.fontFamily },
   filterRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
@@ -408,6 +621,7 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     fontWeight: '700',
     color: '#1B365D',
+    fontFamily: theme.typography.caption.fontFamily,
   },
   filterTextActive: {
     color: '#FFFFFF',
@@ -433,104 +647,162 @@ const styles = StyleSheet.create({
     ...theme.typography.button,
     color: theme.colors.surface,
     fontWeight: '700',
+    fontFamily: theme.typography.button.fontFamily,
   },
   infoText: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+    fontFamily: theme.typography.body.fontFamily,
   },
-  bracketCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing['2xl'],
-    gap: theme.spacing.md,
+  bracketContainer: {
+    marginTop: theme.spacing.lg,
   },
   bracketTitle: {
     ...theme.typography.heading,
+    fontSize: 20,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.lg,
+    fontFamily: theme.typography.heading.fontFamily,
   },
-  roundBlock: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#CBD5F5',
-    paddingLeft: theme.spacing.lg,
-    marginLeft: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  roundHeader: {
+  bracketSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  roundIndicator: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#1B365D',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roundIndicatorText: {
-    ...theme.typography.caption,
-    color: theme.colors.surface,
-    fontWeight: '700',
-  },
-  roundTitle: {
-    ...theme.typography.body,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  matchCard: {
-    backgroundColor: '#F4F6FB',
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    gap: theme.spacing.xs,
-    borderWidth: 1,
-    borderColor: '#E0E7FF',
-  },
-  matchLabel: {
-    ...theme.typography.caption,
-    color: '#4F46E5',
-    fontWeight: '700',
-    marginBottom: theme.spacing.xs,
-  },
-  contestantRow: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.sm,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: theme.spacing.xs,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
-  contestantRowWinner: {
-    borderColor: '#1A9E55',
-    backgroundColor: '#ECFDF3',
-  },
-  contestantName: {
+  bracketSelectorText: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,
+    fontWeight: '600',
+    fontFamily: theme.typography.body.fontFamily,
   },
-  contestantNameWinner: {
+  bracketSelectorChevron: {
+    ...theme.typography.body,
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.typography.body.fontFamily,
+  },
+  bracketScrollContent: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  roundHeaderBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
+  },
+  roundHeaderText: {
+    ...theme.typography.heading,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#047857',
+    color: theme.colors.textPrimary,
+    fontFamily: theme.typography.heading.fontFamily,
   },
-  advanceBadge: {
-    backgroundColor: '#1A9E55',
-    borderRadius: 999,
-    paddingVertical: 4,
-    paddingHorizontal: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
+  playerBox: {
+    width: 180,
+    borderRadius: theme.radius.sm,
+    padding: theme.spacing.sm,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
   },
-  advanceBadgeText: {
-    ...theme.typography.caption,
-    color: theme.colors.surface,
+  playerBoxWinner: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#1B365D',
+    borderWidth: 2,
+  },
+  playerBoxLoser: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+  },
+  playerNameText: {
+    ...theme.typography.body,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: theme.typography.body.fontFamily,
+  },
+  eventTypeOption: {
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing['2xl'],
+    borderRadius: theme.radius.md,
+    backgroundColor: '#F9FAFB',
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  eventTypeOptionActive: {
+    backgroundColor: '#1B365D',
+    borderColor: '#1B365D',
+  },
+  eventTypeOptionText: {
+    ...theme.typography.heading,
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+    fontFamily: theme.typography.heading.fontFamily,
+  },
+  eventTypeOptionTextActive: {
+    color: '#FFFFFF',
     fontWeight: '700',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  modalCard: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    top: '30%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: theme.spacing['2xl'],
+    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    ...theme.typography.heading,
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    fontFamily: theme.typography.heading.fontFamily,
+  },
+  modalCancel: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    ...theme.typography.button,
+    color: theme.colors.error,
+    fontWeight: '600',
+    fontFamily: theme.typography.button.fontFamily,
   },
 });
-
-

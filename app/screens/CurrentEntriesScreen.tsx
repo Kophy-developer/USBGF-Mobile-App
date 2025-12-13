@@ -11,11 +11,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme/tokens';
-import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../context/AuthContext';
 import { fetchUpcomingMatches, UpcomingMatchesPayload, reportMatchResult } from '../services/api';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation';
 
 export const CurrentEntriesScreen: React.FC = () => {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
   const [matchesData, setMatchesData] = useState<UpcomingMatchesPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,30 +48,10 @@ export const CurrentEntriesScreen: React.FC = () => {
       return;
     }
 
-    let matchFile:
-      | { uri: string; name: string; type?: string }
-      | undefined;
-
-    if (item?.actions?.isRequireMatchFile) {
-      const pickerResult = await DocumentPicker.getDocumentAsync({
-        copyToCacheDirectory: false,
-      });
-      if (pickerResult.type !== 'success') {
-        Alert.alert('Match file required', 'A match file is required to report this match.');
-        return;
-      }
-      matchFile = {
-        uri: pickerResult.uri,
-        name: pickerResult.name ?? `match-${contestId}.dat`,
-        type: pickerResult.mimeType ?? 'application/octet-stream',
-      };
-    }
-
     try {
       await reportMatchResult(token, {
         contestId,
         winnerFactContestantId,
-        matchFile,
       });
       Alert.alert(
         'Match Reported',
@@ -103,7 +86,6 @@ export const CurrentEntriesScreen: React.FC = () => {
 
   useEffect(() => {
     loadEntries();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.playerId]);
 
   const awaitingResults = matchesData?.awaitingResults ?? [];
@@ -126,15 +108,43 @@ export const CurrentEntriesScreen: React.FC = () => {
           item.contestId &&
           ((item.factContestantId ?? item.contestantId ?? item.entrantId) ||
             item.opponent?.factContestantId);
-        const requiresMatchFile = !!item.actions?.isRequireMatchFile;
-        const prefersMatchFile = !!item.actions?.isRequestMatchFile && !requiresMatchFile;
+
+        const opponentId = item.opponent?.id ?? item.opponent?.playerId;
+        const opponentName = item.opponent?.name ?? 'Opponent TBD';
 
         return (
           <View key={id} style={styles.entryCard}>
             <TouchableOpacity style={styles.entryHeader} onPress={() => toggleResult(id)}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.entryName}>{item.opponent?.name ?? 'Opponent TBD'}</Text>
-                <Text style={styles.entryEvent}>{item.event?.name ?? 'Event TBD'}</Text>
+                {opponentId ? (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      navigation.navigate('OpponentProfile', {
+                        playerId: opponentId,
+                        playerName: opponentName,
+                      });
+                    }}
+                    style={styles.nameContainer}
+                  >
+                    <Text style={[styles.entryName, styles.entryNameLink]}>{opponentName}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.entryName}>{opponentName}</Text>
+                )}
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    if (item.event?.id) {
+                      navigation.navigate('EventDetails', {
+                        eventId: item.event.id,
+                        eventName: item.event.name,
+                      });
+                    }
+                  }}
+                >
+                  <Text style={styles.entryEvent}>{item.event?.name ?? 'Event TBD'}</Text>
+                </TouchableOpacity>
               </View>
               <Text style={styles.entryChevron}>{isOpen ? '▴' : '▾'}</Text>
             </TouchableOpacity>
@@ -152,6 +162,22 @@ export const CurrentEntriesScreen: React.FC = () => {
                   <Text style={styles.detailLabel}>Deadline</Text>
                   <Text style={styles.detailValue}>{item.deadline ?? '—'}</Text>
                 </View>
+                {opponentId && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Message</Text>
+                    <TouchableOpacity
+                      style={styles.messageButton}
+                      onPress={() => {
+                        navigation.navigate('Contact', {
+                          name: opponentName,
+                          playerId: opponentId,
+                        });
+                      }}
+                    >
+                      <Text style={styles.messageButtonText}>💬 Message Opponent</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
                 {canReportMatch ? (
                   <View style={[styles.detailRow, styles.detailReport]}>
                     <Text style={styles.detailLabel}>Report</Text>
@@ -162,19 +188,14 @@ export const CurrentEntriesScreen: React.FC = () => {
                       >
                         <Text style={styles.reportText}>W</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
+                        <TouchableOpacity
                         style={[styles.reportBadge, styles.reportLoss]}
                         onPress={() => handleReportMatch(item, 'LOSS')}
-                      >
+                        >
                         <Text style={styles.reportText}>L</Text>
-                      </TouchableOpacity>
+                        </TouchableOpacity>
                     </View>
                   </View>
-                ) : null}
-                {requiresMatchFile ? (
-                  <Text style={styles.reportHint}>Match file required when reporting.</Text>
-                ) : prefersMatchFile ? (
-                  <Text style={styles.reportHint}>Match file preferred when reporting.</Text>
                 ) : null}
               </View>
             )}
@@ -284,7 +305,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: theme.spacing['3xl'],
     paddingTop: theme.spacing['2xl'],
-    paddingBottom: theme.spacing['4xl'],
+    paddingBottom: 160,
     gap: theme.spacing['2xl'],
   },
   sectionHeading: {
@@ -318,6 +339,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textPrimary,
   },
+  entryNameLink: {
+    color: '#1B365D',
+    textDecorationLine: 'underline',
+  },
+  nameContainer: {
+    flex: 1,
+  },
+  messageButton: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    backgroundColor: '#F0F4F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageButtonText: {
+    ...theme.typography.caption,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
   entryEvent: {
     ...theme.typography.caption,
     fontSize: 14,
@@ -325,8 +366,10 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
   },
   entryChevron: {
+    ...theme.typography.body,
     fontSize: 18,
     color: theme.colors.textSecondary,
+    fontFamily: theme.typography.body.fontFamily,
     marginLeft: theme.spacing.md,
   },
   entryDetails: {
@@ -424,3 +467,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

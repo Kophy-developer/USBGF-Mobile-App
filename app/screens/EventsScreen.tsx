@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState, useLayoutEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { theme } from '../theme/tokens';
@@ -9,9 +9,14 @@ import { EventSummary, fetchEvents } from '../services/api';
 type EventType = 'ABT' | 'ONLINE';
 type EventStatus = 'ACCEPTING' | 'IN_PROGRESS' | 'COMPLETED';
 
-const ONLINE_TABS: Array<{ key: EventStatus; label: string }> = [
-  { key: 'ACCEPTING', label: 'Accepting' },
-  { key: 'IN_PROGRESS', label: 'In Progress' },
+type EventsScreenProps = {
+  initialViewType?: EventType;
+  initialOnlineTab?: EventStatus;
+  lockViewType?: boolean;
+};
+
+const ABT_TABS: Array<{ key: 'CURRENT' | 'COMPLETED'; label: string }> = [
+  { key: 'CURRENT', label: 'Current' },
   { key: 'COMPLETED', label: 'Completed' },
 ];
 
@@ -40,75 +45,180 @@ const formatDate = (value?: string) => {
   });
 };
 
-export const EventsScreen: React.FC = () => {
+const MONTH_MAP: Record<string, number> = {
+  jan: 0, january: 0,
+  feb: 1, february: 1,
+  mar: 2, march: 2,
+  apr: 3, april: 3,
+  may: 4,
+  jun: 5, june: 5,
+  jul: 6, july: 6,
+  aug: 7, august: 7,
+  sep: 8, sept: 8, september: 8,
+  oct: 9, october: 9,
+  nov: 10, november: 10,
+  dec: 11, december: 11,
+};
+
+const parseEventDateTime = (value?: string): number => {
+  if (!value) return Number.NEGATIVE_INFINITY;
+  const direct = Date.parse(value);
+  if (!Number.isNaN(direct)) return direct;
+
+  // Try custom format like "2022-Jan-7"
+  const parts = value.split(/[-\s]/).filter(Boolean);
+  if (parts.length === 3) {
+    const [yearRaw, monthRaw, dayRaw] = parts;
+    const year = parseInt(yearRaw, 10);
+    const month = MONTH_MAP[monthRaw.toLowerCase()] ?? Number.NaN;
+    const day = parseInt(dayRaw, 10);
+    if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
+      const date = Date.UTC(year, month, day);
+      return date;
+    }
+  }
+
+  return Number.NEGATIVE_INFINITY;
+};
+
+const eventSortValue = (event: EventSummary): number => {
+  const primary = event.start || event.tournament?.start;
+  const fallback = (event as any)?.updatedAt || (event as any)?.createdAt;
+  const tsPrimary = parseEventDateTime(primary);
+  if (tsPrimary !== Number.NEGATIVE_INFINITY) return tsPrimary;
+  const tsFallback = parseEventDateTime(fallback);
+  return tsFallback;
+};
+
+export const EventsScreen: React.FC<EventsScreenProps> = ({
+  initialViewType,
+  initialOnlineTab,
+  lockViewType = false,
+}) => {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { token, user } = useAuth();
-  const [selectorOpen, setSelectorOpen] = useState(true);
-  const [viewType, setViewType] = useState<EventType | null>(null);
+  const [viewType, setViewType] = useState<EventType | null>(
+    lockViewType
+      ? initialViewType ?? 'ABT'
+      : initialViewType ?? (route.params?.initialViewType as EventType | undefined) ?? 'ABT'
+  );
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [onlineTab, setOnlineTab] = useState<EventStatus>('ACCEPTING');
+  const [abtTab, setAbtTab] = useState<'CURRENT' | 'COMPLETED'>('CURRENT');
+  const [onlineTab, setOnlineTab] = useState<EventStatus>(initialOnlineTab ?? 'ACCEPTING');
 
-  const choose = (t: EventType) => {
-    setViewType(t);
-    setSelectorOpen(false);
-    setError(null);
-    setEvents([]);
-    if (t === 'ONLINE') {
-      setOnlineTab('ACCEPTING');
+  // Update navigation header title based on viewType
+  useLayoutEffect(() => {
+    if (viewType === 'ABT') {
+      navigation.setOptions({ title: 'ABT Events' });
+    } else if (viewType === 'ONLINE') {
+      navigation.setOptions({ title: 'Online Events' });
+    } else {
+      navigation.setOptions({ title: 'Events' });
     }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      if (viewType) {
-        return;
-      }
-      setSelectorOpen(true);
-      setViewType(null);
-      setEvents([]);
-      setError(null);
-      setOnlineTab('ACCEPTING');
-    }, [viewType])
-  );
+  }, [viewType, navigation]);
 
   useEffect(() => {
-    const preselect = route.params?.initialViewType as EventType | undefined;
-    if (!preselect) {
-      return;
-    }
-    setViewType(preselect);
-    setSelectorOpen(false);
-    if (preselect === 'ONLINE') {
-      const requestedTab = route.params?.initialOnlineTab as EventStatus | undefined;
+    // Determine initial view type preference: prop takes priority, then route
+    const routeInitialView = route.params?.initialViewType as EventType | undefined;
+    const desiredView = initialViewType ?? routeInitialView ?? viewType ?? 'ABT';
+
+    setViewType(desiredView);
+    if (desiredView === 'ONLINE') {
+      const requestedTab = initialOnlineTab ?? (route.params?.initialOnlineTab as EventStatus | undefined);
       setOnlineTab(requestedTab ?? 'ACCEPTING');
     }
+
+    // Clear route params after use
     navigation.setParams?.({
       initialViewType: undefined,
       initialOnlineTab: undefined,
     });
-  }, [route.params?.initialViewType, route.params?.initialOnlineTab, navigation]);
+  }, [route.params?.initialViewType, route.params?.initialOnlineTab, navigation, initialViewType, initialOnlineTab, viewType]);
 
   const loadEvents = useCallback(
-    async (selectedType: EventType) => {
-      if (!token) {
+    async (selectedType: EventType, tab?: 'CURRENT' | 'COMPLETED') => {
+      if (!token || !user?.playerId) {
         setEvents([]);
         return;
       }
 
       const clubId = selectedType === 'ABT' ? 5 : 2;
+      
+      // For ABT events, load CURRENT (Accepting + In Progress) or COMPLETED
+      if (selectedType === 'ABT') {
+        if (tab === 'COMPLETED') {
+          // Load completed events
+          setLoading(true);
+          setError(null);
+          try {
+            const data = await fetchEvents(token, {
+              clubId,
+              player: user.playerId,
+              tab: 'Completed',
+            });
+            setEvents(data.events ?? []);
+          } catch (err: any) {
+            setError(err?.message ?? 'Unable to load events.');
+            setEvents([]);
+          } finally {
+            setLoading(false);
+          }
+        } else {
+          // Load CURRENT: both Accepting Entries and In Progress
+          setLoading(true);
+          setError(null);
+          try {
+            const [acceptingData, inProgressData] = await Promise.all([
+              fetchEvents(token, {
+                clubId,
+                player: user.playerId,
+                tab: 'Accepting Entries',
+              }),
+              fetchEvents(token, {
+                clubId,
+                player: user.playerId,
+                tab: 'In Progress',
+              }),
+            ]);
+            // Combine both arrays
+            const combinedEvents = [
+              ...(acceptingData.events ?? []),
+              ...(inProgressData.events ?? []),
+            ];
+            // Remove duplicates based on event ID
+            const uniqueEvents = combinedEvents.filter((event, index, self) =>
+              index === self.findIndex((e) => e.id === event.id)
+            );
+            setEvents(uniqueEvents);
+          } catch (err: any) {
+            setError(err?.message ?? 'Unable to load events.');
+            setEvents([]);
+          } finally {
+            setLoading(false);
+          }
+        }
+        return;
+      }
+
+      // For ONLINE events, load all and filter client-side
+      let tabParam: string | undefined;
 
       setLoading(true);
       setError(null);
       try {
         const data = await fetchEvents(token, {
           clubId,
-          playerId: user?.playerId,
+          player: user.playerId,
+          tab: tabParam,
         });
-        setEvents(data.events ?? []);
+        const eventsList = data.events ?? [];
+        console.log(`[EventsScreen] Loaded ${eventsList.length} events for ${selectedType} (clubId: ${clubId}, tab: ${tabParam || 'none'})`);
+        setEvents(eventsList);
       } catch (err: any) {
+        console.error('[EventsScreen] Error loading events:', err);
         setError(err?.message ?? 'Unable to load events.');
         setEvents([]);
       } finally {
@@ -119,19 +229,48 @@ export const EventsScreen: React.FC = () => {
   );
 
   useEffect(() => {
-    if (viewType) {
-      loadEvents(viewType);
+    if (!viewType) {
+      setEvents([]);
+      setError(null);
+      return;
     }
-  }, [viewType, loadEvents]);
+
+    if (viewType === 'ABT') {
+      // For ABT, load events based on the selected tab
+      loadEvents(viewType, abtTab);
+    } else if (viewType === 'ONLINE') {
+      // For ONLINE, load accepting entries (includes repeating qualifiers)
+      loadEvents(viewType, undefined);
+    }
+  }, [viewType, abtTab, loadEvents]);
 
   const filteredEvents = useMemo(() => {
+    let result: EventSummary[];
+    
     if (viewType === 'ONLINE') {
-      return events.filter((event) => getEventStatus(event) === onlineTab);
+      // For ONLINE events, show all accepting entries (includes repeating qualifiers)
+      // Filter to show only accepting entries - events that are not completed and not started
+      result = events.filter((event) => {
+        const hasWinner = event.winner && String(event.winner).trim().length > 0;
+        const isStarted = event.isPlayStarted;
+        // Show accepting entries: not completed, not started, or repeating qualifiers
+        // Repeating qualifiers can be identified by checking if event is in progress but still accepting
+        return !hasWinner;
+      });
+    } else if (viewType === 'ABT') {
+      // For ABT events, sort completed tab by most recent first
+      if (abtTab === 'COMPLETED') {
+        result = [...events].sort((a, b) => eventSortValue(b) - eventSortValue(a));
+      } else {
+        result = events;
+      }
+    } else {
+      result = events;
     }
-    return events;
-  }, [events, viewType, onlineTab]);
+    
+    return result;
+  }, [events, viewType, abtTab]);
 
-  const shouldShowCalendarButton = !selectorOpen && viewType === 'ABT';
 
   const handleEventPress = useCallback(
     (event: EventSummary) => {
@@ -151,44 +290,53 @@ export const EventsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['left','right']}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {!viewType && (
-          <Text style={styles.helper}>Select an events type to view</Text>
-        )}
-
+      <ScrollView 
+        style={{ flex: 1 }} 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        scrollEnabled
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+      >
         {viewType && (
           <>
-            <Text style={styles.sectionHeading}>
-              {viewType === 'ABT' ? 'Current ABT Events' : 'Online Events'}
-            </Text>
-
             {!token ? (
               <Text style={styles.helper}>Please sign in to view events.</Text>
             ) : (
               <>
-                {viewType === 'ONLINE' && (
+                {viewType === 'ABT' && (
                   <View style={styles.tabsRow}>
-                    {ONLINE_TABS.map((tab) => (
-                      <TouchableOpacity
-                        key={tab.key}
-                        style={[
-                          styles.tabButton,
-                          onlineTab === tab.key ? styles.tabButtonActive : undefined,
-                        ]}
-                        onPress={() => setOnlineTab(tab.key)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: onlineTab === tab.key }}
-                      >
-                        <Text
+                    {ABT_TABS.map((tab) => {
+                      const isActive = abtTab === tab.key;
+                      return (
+                        <TouchableOpacity
+                          key={tab.key}
                           style={[
-                            styles.tabLabel,
-                            onlineTab === tab.key ? styles.tabLabelActive : undefined,
+                            styles.tabButton,
+                            isActive ? styles.tabButtonActive : undefined,
                           ]}
+                          onPress={() => {
+                            setAbtTab(tab.key);
+                            // Load events for the selected tab
+                            if (viewType === 'ABT') {
+                              loadEvents(viewType, tab.key);
+                            }
+                          }}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: isActive }}
+                          activeOpacity={0.7}
                         >
-                          {tab.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                          <Text
+                            style={[
+                              styles.tabLabel,
+                              isActive ? styles.tabLabelActive : undefined,
+                            ]}
+                          >
+                            {tab.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 )}
 
@@ -203,33 +351,46 @@ export const EventsScreen: React.FC = () => {
                     <Text style={styles.errorText}>{error}</Text>
                     <TouchableOpacity
                       style={styles.retryButton}
-                      onPress={() => viewType && loadEvents(viewType)}
+                      onPress={() => viewType && loadEvents(viewType, viewType === 'ABT' ? abtTab : undefined)}
                     >
                       <Text style={styles.retryText}>Retry</Text>
                     </TouchableOpacity>
-                  </View>
+              </View>
                 )}
 
                 {!loading && !error && (
                   <>
                     {!filteredEvents.length ? (
-                      <Text style={styles.helper}>No events available at the moment.</Text>
+                      <Text style={styles.helper}>
+                        {viewType === 'ABT' 
+                          ? `No ${abtTab === 'CURRENT' ? 'current' : 'completed'} events available at the moment.`
+                          : 'No events available at the moment.'}
+                      </Text>
                     ) : (
                       filteredEvents.map((event) => {
-                        const status = getEventStatus(event);
+                        // For ONLINE events, determine symbol
+                        let eventStatusIcon: any = null;
+                        if (viewType === 'ONLINE') {
+                          const isEntered = event.userIsEntered === true;
+                          const eligibility = (event.userEligibility || '').toLowerCase();
+                          if (isEntered) {
+                            eventStatusIcon = require('../assets/star.png');
+                          } else if (eligibility === 'eligible') {
+                            eventStatusIcon = require('../assets/green.png');
+                          } else if (eligibility === 'ineligible') {
+                            eventStatusIcon = require('../assets/grey.png');
+                          }
+                        }
+                        
                         return (
-                          <View key={event.id} style={styles.eventCard}>
-                            <View style={styles.eventHeader}>
+                          <TouchableOpacity 
+                            key={event.id} 
+                            style={styles.eventCard}
+                            onPress={() => handleEventPress(event)}
+                            activeOpacity={0.85}
+                          >
+                            <View style={styles.eventTitleRow}>
                               <Text style={styles.eventTitle}>{event.nameWithTournament || event.name}</Text>
-                              <View style={[styles.statusPill, styles[`status${status}`]]}>
-                                <Text style={styles.statusText}>
-                                  {status === 'ACCEPTING'
-                                    ? 'Accepting'
-                                    : status === 'IN_PROGRESS'
-                                    ? 'In Progress'
-                                    : 'Completed'}
-                                </Text>
-                              </View>
                             </View>
                             {event.tournament?.name && event.tournament?.name !== event.nameWithTournament ? (
                               <Text style={styles.eventSubTitle}>{event.tournament?.name}</Text>
@@ -239,21 +400,13 @@ export const EventsScreen: React.FC = () => {
                                 <Text style={styles.metaLabel}>Start: </Text>
                                 <Text style={styles.metaValue}>{formatDate(event.start)}</Text>
                               </Text>
-                              {event.winner ? (
-                                <Text style={styles.metaLine}>
-                                  <Text style={styles.metaLabel}>Winner: </Text>
-                                  <Text style={styles.metaValue}>{event.winner}</Text>
-                                </Text>
-                              ) : null}
-                              <TouchableOpacity
-                                style={styles.viewButton}
-                                onPress={() => handleEventPress(event)}
-                                activeOpacity={0.85}
-                              >
-                                <Text style={styles.viewButtonText}>View Event</Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
+                              {eventStatusIcon && (
+                                <View style={styles.statusRow}>
+                                  <Image source={eventStatusIcon} style={styles.statusIcon} resizeMode="contain" />
+                                </View>
+                              )}
+            </View>
+                          </TouchableOpacity>
                         );
                       })
                     )}
@@ -264,36 +417,16 @@ export const EventsScreen: React.FC = () => {
           </>
         )}
 
-        {shouldShowCalendarButton && (
-          <TouchableOpacity 
-            style={styles.calendarBtn}
-            onPress={() => navigation.navigate('ABTCalendar' as never)}
-          >
-            <Text style={styles.calendarText}>View ABT Calendar</Text>
-          </TouchableOpacity>
-        )}
       </ScrollView>
-
-      <Modal transparent visible={selectorOpen} animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => setSelectorOpen(false)} />
-        <View style={styles.modalCard}>
-          <TouchableOpacity style={styles.modalBtn} onPress={() => choose('ABT')}>
-            <Text style={styles.modalBtnText}>Current ABT Events</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modalBtn} onPress={() => choose('ONLINE')}>
-            <Text style={styles.modalBtnText}>Online Events</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
-  content: { paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160, gap: theme.spacing.md },
+  content: { flexGrow: 1, paddingHorizontal: theme.spacing['3xl'], paddingTop: theme.spacing['2xl'], paddingBottom: 160, gap: theme.spacing.md },
   helper: { textAlign: 'center', color: theme.colors.textSecondary, marginTop: theme.spacing['2xl'] },
-  sectionHeading: { ...theme.typography.heading, fontSize: 20, fontWeight: '700', color: theme.colors.textPrimary },
+  sectionHeading: { ...theme.typography.heading, fontSize: 20, fontWeight: '700', color: theme.colors.textPrimary, fontFamily: theme.typography.heading.fontFamily },
   tabsRow: { flexDirection: 'row', gap: theme.spacing.md, marginBottom: theme.spacing.lg },
   tabButton: {
     flex: 1,
@@ -307,55 +440,32 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
-  tabLabel: { ...theme.typography.body, color: theme.colors.textPrimary, fontWeight: '600' },
+  tabLabel: { ...theme.typography.body, color: theme.colors.textPrimary, fontWeight: '600', fontFamily: theme.typography.body.fontFamily },
   tabLabelActive: { color: theme.colors.surface },
   loadingContainer: { paddingVertical: theme.spacing['4xl'], alignItems: 'center', justifyContent: 'center' },
   errorContainer: { paddingVertical: theme.spacing['3xl'], alignItems: 'center', gap: theme.spacing.md },
-  errorText: { ...theme.typography.body, color: theme.colors.error, textAlign: 'center' },
+  errorText: { ...theme.typography.body, color: theme.colors.error, textAlign: 'center', fontFamily: theme.typography.body.fontFamily },
   retryButton: { backgroundColor: theme.colors.primary, paddingHorizontal: theme.spacing['2xl'], paddingVertical: theme.spacing.sm, borderRadius: theme.radius.md },
-  retryText: { ...theme.typography.button, color: theme.colors.surface, fontWeight: '700' },
+  retryText: { ...theme.typography.button, color: theme.colors.surface, fontWeight: '700', fontFamily: theme.typography.button.fontFamily },
   eventCard: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.surface,
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
-  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.md, alignItems: 'center' },
-  eventTitle: { ...theme.typography.heading, fontSize: 18, color: theme.colors.textPrimary, flex: 1 },
-  eventSubTitle: { ...theme.typography.caption, color: theme.colors.textSecondary },
-  statusPill: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: theme.colors.border,
-  },
-  statusACCEPTING: { backgroundColor: '#1B365D' },
-  statusIN_PROGRESS: { backgroundColor: '#1A9E55' },
-  statusCOMPLETED: { backgroundColor: '#52525B' },
-  statusText: { ...theme.typography.button, color: theme.colors.surface, fontWeight: '700' },
+  eventTitle: { ...theme.typography.heading, fontSize: 18, color: theme.colors.textPrimary, fontFamily: theme.typography.heading.fontFamily, flexWrap: 'wrap' },
+  eventTitleRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
+  statusIcon: { width: 36, height: 36 },
+  eventSubTitle: { ...theme.typography.caption, color: theme.colors.textSecondary, fontFamily: theme.typography.caption.fontFamily },
   eventMeta: { gap: theme.spacing.xs },
-  metaLine: { ...theme.typography.body, color: theme.colors.textSecondary },
-  metaLabel: { fontWeight: '600', color: theme.colors.textPrimary },
+  metaLine: { ...theme.typography.body, color: theme.colors.textSecondary, fontFamily: theme.typography.body.fontFamily },
+  metaLabel: { ...theme.typography.body, fontWeight: '600', color: theme.colors.textPrimary, fontFamily: theme.typography.body.fontFamily },
   metaValue: { color: theme.colors.textSecondary },
-  viewButton: {
-    marginTop: theme.spacing.lg,
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-  },
-  viewButtonText: {
-    ...theme.typography.button,
-    color: theme.colors.surface,
-    fontWeight: '700',
-  },
-  calendarBtn: { backgroundColor: '#1B365D', alignSelf: 'center', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 20, marginTop: theme.spacing['2xl'] },
-  calendarText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
   modalCard: { position: 'absolute', left: 24, right: 24, top: '30%', backgroundColor: '#FFFFFF', borderRadius: 12, padding: theme.spacing['2xl'], gap: theme.spacing.md, borderWidth: 1, borderColor: theme.colors.border },
   modalBtn: { backgroundColor: '#1B365D', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  modalBtnText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700' },
+  modalBtnText: { ...theme.typography.button, color: '#FFFFFF', fontWeight: '700', fontFamily: theme.typography.button.fontFamily },
 });

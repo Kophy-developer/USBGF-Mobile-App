@@ -2,7 +2,9 @@
   "cli": { "version": ">= 3.20.0", "appVersionSource": "remote" },
   "build": {
     "apk": {
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk"
+      },
       "node": "20.19.4"
     }
   }

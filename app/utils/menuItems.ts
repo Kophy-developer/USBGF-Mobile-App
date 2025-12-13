@@ -1,9 +1,13 @@
 import { CommonActions } from '@react-navigation/native';
 
-export const buildPrimaryMenuItems = (navigation: any) => [
+export const buildPrimaryMenuItems = (navigation: any, onLogout?: () => Promise<void> | void) => [
   {
-    label: 'Current Entries',
+    label: 'Current Matches',
     onPress: () => navigation.navigate('Dashboard' as never, { screen: 'CurrentEntries' } as never),
+  },
+  {
+    label: 'View ABT Calendar',
+    onPress: () => navigation.navigate('ABTCalendar' as never),
   },
   {
     label: 'Account Balance',
@@ -16,13 +20,20 @@ export const buildPrimaryMenuItems = (navigation: any) => [
   {
     label: 'Log Out',
     destructive: true,
-    onPress: () =>
+    onPress: async () => {
+      try {
+        if (onLogout) {
+          await onLogout();
+        }
+      } finally {
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
           routes: [{ name: 'AuthStack' }],
         })
-      ),
+        );
+      }
+    },
   },
 ];
 

@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
     fontWeight: '500',
+    fontFamily: theme.typography.body.fontFamily,
   },
   selector: {
     flexDirection: 'row',
@@ -91,13 +92,18 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.textPrimary,
     flex: 1,
+    fontFamily: theme.typography.body.fontFamily,
   },
   placeholderText: {
+    ...theme.typography.body,
     color: theme.colors.placeholder,
+    fontFamily: theme.typography.body.fontFamily,
   },
   chevron: {
+    ...theme.typography.body,
     fontSize: 18,
     color: theme.colors.textSecondary,
+    fontFamily: theme.typography.body.fontFamily,
     marginLeft: theme.spacing.sm,
   },
   backdrop: {
@@ -132,6 +138,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
+    fontFamily: theme.typography.heading.fontFamily,
   },
   optionsContainer: {
     gap: theme.spacing.sm,
@@ -142,10 +149,13 @@ const styles = StyleSheet.create({
   optionText: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,
+    fontFamily: theme.typography.body.fontFamily,
   },
   optionSelected: {
+    ...theme.typography.body,
     fontWeight: '700',
     color: theme.colors.primary,
+    fontFamily: theme.typography.body.fontFamily,
   },
 });
 
