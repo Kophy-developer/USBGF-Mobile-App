@@ -4,13 +4,7 @@ let scraperPromise: Promise<ABTEvent[]> | null = null;
 let scraperResolve: ((events: ABTEvent[]) => void) | null = null;
 let scraperReject: ((error: Error) => void) | null = null;
 
-/**
- * Advanced scraper script that:
- * 1. Waits for page to fully load
- * 2. Scrolls to bottom incrementally to trigger lazy loading
- * 3. Waits for all content to load
- * 4. Extracts the complete HTML
- */
+
 const SCRAPER_SCRIPT = `
   (function() {
     let scrollAttempts = 0;

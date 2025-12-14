@@ -1,23 +1,21 @@
 export interface ABTEvent {
   id: string;
-  dateRange: string; // e.g., "04 - 07" or "4th to 7th"
-  dateRangeFull: string; // e.g., "4th to 7th December, 2025"
-  title: string; // e.g., "2025 California State Championship"
+  dateRange: string; 
+  dateRangeFull: string; 
+  title: string; 
   location: string;
   month: string;
   year: string;
-  monthAbbr: string; // e.g., "DEC"
-  dayStart: number; // e.g., 4
-  dayEnd: number; // e.g., 7
+  monthAbbr: string; 
+  dayStart: number; 
+  dayEnd: number; 
 }
 
 const ABT_CALENDAR_URL = 'https://usbgf.org/abt-calendar/';
 
 let isFetching = false;
 
-// No seed events - we always fetch fresh data from the website
 
-// Helper function to get ordinal number (1st, 2nd, 3rd, 4th, etc.)
 function getOrdinalSuffix(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
@@ -25,7 +23,6 @@ function getOrdinalSuffix(n: number): string {
   return `${n}${suffix}`;
 }
 
-// Helper function to get month abbreviation
 function getMonthAbbr(month: string): string {
   const months: { [key: string]: string } = {
     'January': 'JAN',
@@ -51,10 +48,8 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
     const cleanHtml = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
                           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
     
-    // Pattern to find month/year headers
     const monthYearPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/gi;
     
-    // Pattern to find date ranges like "04 - 07" or "4 - 7" followed by month abbreviation
     const dateRangePattern = /(\d{1,2})\s*[-–—]\s*(\d{1,2})\s+([A-Z]{3})/gi;
     
     const monthSections: Array< { month: string; year: string; index: number }> = [];
@@ -77,13 +72,11 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
       
       const sectionHtml = cleanHtml.substring(startIndex, endIndex);
       
-      // Find all date ranges in this section
       const dateMatches: Array<{ dayStart: number; dayEnd: number; monthAbbr: string; index: number }> = [];
       let dateMatch;
       const localDatePattern = new RegExp(dateRangePattern.source, 'gi');
       
       while ((dateMatch = localDatePattern.exec(sectionHtml)) !== null) {
-        // Check if the month abbreviation matches
         const expectedAbbr = getMonthAbbr(monthSection.month);
         if (dateMatch[3].toUpperCase() === expectedAbbr) {
         dateMatches.push({
@@ -96,13 +89,11 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
       }
       
       dateMatches.forEach((dateMatch) => {
-        // Extract content after the date range
         const afterDate = sectionHtml.substring(
-          dateMatch.index + 100, // Look further after the date
+          dateMatch.index + 100, 
           dateMatch.index + 800
         );
         
-        // Try multiple patterns to find the title
         const titlePatterns = [
           /<h[234][^>]*>([^<]+?)<\/h[234]>/i,
           /<strong[^>]*>([^<]+?)<\/strong>/i,
@@ -119,24 +110,21 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
               .replace(/[<>]/g, '')
               .trim();
             
-            // Filter out invalid titles
             if (title.length > 15 && 
                 !title.toUpperCase().includes('EVENT DETAIL') && 
                 !title.toUpperCase().includes('ABT CALENDAR') &&
-                !title.match(/^[A-Z\s]{3,}$/)) { // Not all caps short text
+                !title.match(/^[A-Z\s]{3,}$/)) { 
               break;
           }
             title = '';
           }
         }
         
-        // Extract location (day of week + venue)
         const locationPattern = /(?:Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Monday)[,\s]+([^<]{10,100}?)(?:,|$|\.|<|EVENT|AM|PM)/i;
         const locationMatch = afterDate.match(locationPattern);
         const location = locationMatch ? locationMatch[1].trim() : '';
         
         if (title && title.length > 15 && location && location.length > 5) {
-          // Create formatted date range
           const dateRange = `${dateMatch.dayStart.toString().padStart(2, '0')} - ${dateMatch.dayEnd.toString().padStart(2, '0')}`;
           const dateRangeFull = `${getOrdinalSuffix(dateMatch.dayStart)} to ${getOrdinalSuffix(dateMatch.dayEnd)} ${monthSection.month}, ${monthSection.year}`;
           
@@ -156,7 +144,6 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
       });
     });
     
-    // Sort events chronologically
     events.sort((a, b) => {
       const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
                           'July', 'August', 'September', 'October', 'November', 'December'];
@@ -174,10 +161,7 @@ export function parseABTEventsFromHTML(html: string): ABTEvent[] {
   }
 }
 
-/**
- * Fetch ABT events using WebView scraper (handles lazy loading)
- * This always fetches fresh data - no caching
- */
+
 export async function fetchABTEvents(): Promise<ABTEvent[]> {
   if (isFetching) {
     // If already fetching, wait for it
@@ -191,14 +175,10 @@ export async function fetchABTEvents(): Promise<ABTEvent[]> {
     });
 }
 
-  // Note: This function is meant to be used with the WebView scraper
-  // The actual scraping is handled in ABTCalendarScreen using the scraper service
+  
   return [];
   }
 
-/**
- * Clear any in-memory cache (for consistency, though we don't cache)
- */
+
 export function clearABTCache(): void {
-  // No-op since we don't cache anymore
 }
