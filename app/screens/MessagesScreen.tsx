@@ -17,36 +17,15 @@ interface Notification {
   contactName?: string;
   playerId?: number | string;
   email?: string;
-  messageId?: number; // For hardcoded notifications
+  messageId?: number;
 }
-
-const hardcodedNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'New Jersey Member Blitz - 2026',
-    content: 'Round 2 vs kophy test.',
-    contactName: 'kophy test',
-    playerId: 13903,
-    email: 'kophytech@gmail.com',
-    messageId: 218, // Use messageId 218 for hardcoded notifications
-  },
-  {
-    id: '2',
-    title: 'Florida Member Blitz - 2026',
-    content: 'Round 2 vs SSC.',
-    contactName: 'SSC',
-    playerId: 12357,
-    email: 'stuart.steene@gmail.com',
-    messageId: 218, // Use messageId 218 for hardcoded notifications
-  },
-];
 
 export const MessagesScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { token, user } = useAuth();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [notifications, setNotifications] = useState<Notification[]>(hardcodedNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   const toggle = (id: string) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -88,11 +67,10 @@ export const MessagesScreen: React.FC = () => {
           };
         });
 
-      // Combine hardcoded notifications with dynamic ones
-      setNotifications([...hardcodedNotifications, ...dynamicNotifications]);
+      setNotifications(dynamicNotifications);
     } catch (error) {
-      // On error, just use hardcoded notifications
       console.log('Failed to load notifications:', error);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -108,7 +86,7 @@ export const MessagesScreen: React.FC = () => {
       name: notification.contactName, 
       playerId: notification.playerId,
       email: notification.email,
-      messageId: notification.messageId, // Pass messageId for hardcoded notifications
+      messageId: notification.messageId,
     });
   };
 
