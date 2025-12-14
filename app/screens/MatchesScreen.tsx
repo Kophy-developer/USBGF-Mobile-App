@@ -727,12 +727,6 @@ export const MatchesScreen: React.FC = () => {
           <View key={`${item.event?.id ?? index}-${index}`} style={styles.simpleCard}>
             <Text style={styles.entryName}>{item.event?.name ?? 'Event TBD'}</Text>
             <Text style={styles.entryEvent}>{item.bracket?.name ?? 'Bracket TBD'}</Text>
-            {item.event?.startTime && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Start Date</Text>
-                <Text style={styles.detailValue}>{item.event.startTime}</Text>
-              </View>
-            )}
           </View>
         ))}
       </>
