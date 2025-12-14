@@ -507,13 +507,11 @@ export const MatchesScreen: React.FC = () => {
       .sort((a, b) => {
         const tA = matchSortValue(a);
         const tB = matchSortValue(b);
-        // For Online matches, sort ascending (earliest first); for ABT, sort descending (latest first)
+        // Sort ascending (earliest first) for both ONLINE and ABT
         if (tA !== tB) {
-          return viewType === 'ONLINE' ? tA - tB : tB - tA;
+          return tA - tB;
         }
-        return viewType === 'ONLINE' 
-          ? (a.contestId ?? a.matchId ?? 0) - (b.contestId ?? b.matchId ?? 0)
-          : (b.contestId ?? b.matchId ?? 0) - (a.contestId ?? a.matchId ?? 0);
+        return (a.contestId ?? a.matchId ?? 0) - (b.contestId ?? b.matchId ?? 0);
       });
     
     // Filter out locally reported matches (they'll show with un-report button instead)
@@ -679,8 +677,8 @@ export const MatchesScreen: React.FC = () => {
     const awaitingOpponents = (upcomingData?.awaitingOpponent ?? []).slice().sort((a, b) => {
       const tA = matchSortValue(a);
       const tB = matchSortValue(b);
-      if (tA !== tB) return tB - tA;
-      return (b.contestId ?? b.matchId ?? 0) - (a.contestId ?? a.matchId ?? 0);
+      if (tA !== tB) return tA - tB;
+      return (a.contestId ?? a.matchId ?? 0) - (b.contestId ?? b.matchId ?? 0);
     });
     if (awaitingOpponents.length === 0) return null;
 
@@ -715,8 +713,8 @@ export const MatchesScreen: React.FC = () => {
     const awaitingDraw = (upcomingData?.awaitingDraw ?? []).slice().sort((a, b) => {
       const tA = matchSortValue(a);
       const tB = matchSortValue(b);
-      if (tA !== tB) return tB - tA;
-      return (b.contestId ?? b.matchId ?? 0) - (a.contestId ?? a.matchId ?? 0);
+      if (tA !== tB) return tA - tB;
+      return (a.contestId ?? a.matchId ?? 0) - (b.contestId ?? b.matchId ?? 0);
     });
     if (awaitingDraw.length === 0) return null;
 
